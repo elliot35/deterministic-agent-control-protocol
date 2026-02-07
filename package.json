@@ -1,6 +1,6 @@
 {
   "name": "@det-acp/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Agent Governance Gateway — bounded, auditable, session-aware control for AI agents with MCP proxy, shell proxy, and HTTP API",
   "type": "module",
   "main": "dist/index.js",
@@ -60,11 +60,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/det-acp/agent-control-plane.git"
+    "url": "https://github.com/elliot35/deterministic-agent-control-protocol.git"
   },
-  "homepage": "https://github.com/det-acp/agent-control-plane#readme",
+  "homepage": "https://github.com/elliot35/deterministic-agent-control-protocol#readme",
   "bugs": {
-    "url": "https://github.com/det-acp/agent-control-plane/issues"
+    "url": "https://github.com/elliot35/deterministic-agent-control-protocol/issues"
   },
   "publishConfig": {
     "access": "public"

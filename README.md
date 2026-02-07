@@ -1,30 +1,67 @@
 # Deterministic Agent Control Protocol
 
-A governance gateway for AI agents — makes any agent bounded, auditable, reversible, and explainable.
+[![Stars](https://img.shields.io/github/stars/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/stargazers)
+[![Forks](https://img.shields.io/github/forks/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/network/members)
+[![Contributors](https://img.shields.io/github/contributors/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/graphs/contributors)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/deterministic-agent-control-protocol)](https://www.npmjs.com/package/@det-acp/core)
+![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/-Node.js-339933?logo=node.js&logoColor=white)
 
-Works transparently with **Cursor**, **Claude Code**, **Codex**, and any MCP-compatible agent via the MCP proxy. Also supports shell command governance and a language-agnostic HTTP API.
+**A governance gateway for AI agents — making every action bounded, auditable, reversible, and explainable.**
+
+Works transparently with **Cursor**, **Claude Code**, **Codex**, and any MCP-compatible agent. Also supports shell command governance and a language-agnostic HTTP API.
+
+---
+
+## Table of Contents
+
+- [How It Works](#how-it-works)
+- [Core Principles](#core-principles)
+- [Quick Start](#quick-start)
+- [Agent Integrations](#agent-integrations)
+- [Built-in Policies](#built-in-policies)
+- [Integration Modes](#integration-modes)
+- [Architecture](#architecture)
+- [Policy DSL Reference](#policy-dsl-reference)
+- [Built-in Tool Adapters](#built-in-tool-adapters)
+- [Custom Tool Adapters](#custom-tool-adapters)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## How It Works
 
-Instead of agents executing tools directly, every action flows through the control plane:
+Agents never execute tools directly. Every action flows through the control plane for evaluation, enforcement, and audit:
 
-```
-Agent → Control Protocol (evaluate) → allow / deny / gate
-                                          ↓ (if allowed)
-                                     Agent executes action
-                                          ↓
-                                Control Protocol (record result)
+```mermaid
+flowchart LR
+    A["Agent"] -->|"action request"| CP["Control Protocol"]
+    CP -->|"evaluate against policy"| D{"Decision"}
+    D -->|"allow"| E["Agent Executes Action"]
+    D -->|"deny"| F["Blocked + Reason Logged"]
+    D -->|"gate"| G["Human Approval Required"]
+    E -->|"record result"| L["Evidence Ledger"]
+    G -->|"approved"| E
 ```
 
-The control protocol **does not execute** actions — it evaluates them against a policy, enforces session-level budgets, requires human approval for risky actions, and records everything in a tamper-evident audit ledger.
+The protocol **does not execute** actions itself. It evaluates them against a policy, enforces session-level budgets, requires human approval for risky operations, and records everything in a tamper-evident audit ledger.
+
+---
 
 ## Core Principles
 
-- **Bounded**: Agents can only perform allowed actions in allowed scopes
-- **Session-Aware**: Budget, rate limits, and escalation rules across the full interaction
-- **Auditable**: Every action logged in a tamper-evident ledger with SHA-256 hash chaining
-- **Reversible**: Compensation plans for undoing executed actions
-- **Explainable**: Full reporting — what was allowed, denied, gated, and why
+| Principle | Description |
+|-----------|-------------|
+| **Bounded** | Agents can only perform allowed actions within allowed scopes |
+| **Session-Aware** | Budget, rate limits, and escalation rules across the full interaction |
+| **Auditable** | Every action logged in a tamper-evident ledger with SHA-256 hash chaining |
+| **Reversible** | Compensation plans for undoing executed actions |
+| **Explainable** | Full reporting — what was allowed, denied, gated, and why |
+
+---
 
 ## Quick Start
 
@@ -36,32 +73,24 @@ npm install deterministic-agent-control-protocol
 
 ### Set Up Governance (One Command)
 
-The fastest way to add governance to your AI agent:
-
 ```bash
-# Cursor
-npx det-acp init cursor
-
-# Codex CLI
-npx det-acp init codex
-
-# Claude Code
-npx det-acp init claude-code
+npx det-acp init cursor        # Cursor
+npx det-acp init codex         # Codex CLI
+npx det-acp init claude-code   # Claude Code
 ```
 
-This generates all required files (policy, MCP config, governance rules) with sensible defaults. The only file you may want to edit is `policy.yaml` — everything else is handled automatically.
-
-To use your own policy instead of the default:
+This generates all required files (policy, MCP config, governance rules) with sensible defaults. Edit `policy.yaml` to customize — everything else is handled automatically.
 
 ```bash
+# Use your own policy instead of the default
 npx det-acp init cursor --policy ./my-policy.yaml
 ```
 
-After running `init`, restart your agent (Cursor, Claude Code, etc.) to pick up the MCP server.
+> After running `init`, restart your agent to pick up the MCP server.
 
 ### Define a Policy
 
-Create an `agent.policy.yaml`:
+Create `agent.policy.yaml`:
 
 ```yaml
 version: "1.0"
@@ -129,7 +158,7 @@ const verdict = await gateway.evaluate(session.id, {
 });
 
 if (verdict.decision === 'allow') {
-  // Execute the action yourself (or via your agent)
+  // Execute the action yourself
   const content = fs.readFileSync('./src/index.ts', 'utf-8');
 
   // Record the result
@@ -140,7 +169,7 @@ if (verdict.decision === 'allow') {
   });
 }
 
-// When done, terminate and get report
+// Terminate and get report
 const report = await gateway.terminateSession(session.id, 'task complete');
 console.log(`Allowed: ${report.allowed}, Denied: ${report.denied}`);
 ```
@@ -149,42 +178,68 @@ console.log(`Allowed: ${report.allowed}, Denied: ${report.denied}`);
 
 ## Agent Integrations
 
-Ready-to-use integration guides for popular AI agents. Each integration includes a policy, config templates, governance rules, test sandbox, and step-by-step instructions.
+Ready-to-use guides for popular AI agents. Each integration includes policy, config templates, governance rules, test sandbox, and step-by-step instructions.
 
-| Agent                 | Integration Mode                      | Governance Level | Guide                                               |
-| --------------------- | ------------------------------------- | ---------------- | --------------------------------------------------- |
-| **Cursor**      | MCP Proxy + Cursor Rules              | Soft             | [integrations/cursor/](integrations/cursor/)           |
-| **Codex CLI**   | MCP Proxy + AGENTS.md + OS Sandbox    | Soft + Sandbox   | [integrations/codex/](integrations/codex/)             |
+| Agent | Integration Mode | Governance Level | Guide |
+|-------|-----------------|-----------------|-------|
+| **Cursor** | MCP Proxy + Cursor Rules | Soft | [integrations/cursor/](integrations/cursor/) |
+| **Codex CLI** | MCP Proxy + AGENTS.md + OS Sandbox | Soft + Sandbox | [integrations/codex/](integrations/codex/) |
 | **Claude Code** | MCP Proxy + CLAUDE.md + settings.json | Soft + Semi-Hard | [integrations/claude-code/](integrations/claude-code/) |
-| **OpenClaw**    | HTTP API + Skill + Docker Sandbox     | Hard             | [integrations/openclaw/](integrations/openclaw/)       |
+| **OpenClaw** | HTTP API + Skill + Docker Sandbox | Hard | [integrations/openclaw/](integrations/openclaw/) |
 
-### Governance Levels Explained
+<details>
+<summary><strong>Governance Levels Explained</strong></summary>
 
-- **Soft**: The LLM is instructed (via rules/instructions files) to prefer governed tools. Effective in practice, but a creative prompt could theoretically bypass it.
-- **Semi-Hard**: Soft instructions combined with the agent's built-in permission system that can deny direct tool access (e.g., Claude Code's `settings.json`).
-- **Hard**: The agent physically cannot access tools outside the governance layer. Achieved via Docker sandboxing, tool allow/deny lists, or custom agent harnesses.
+- **Soft** — The LLM is instructed (via rules/instructions files) to prefer governed tools. Effective in practice, but a creative prompt could theoretically bypass it.
+- **Semi-Hard** — Soft instructions combined with the agent's built-in permission system that can deny direct tool access (e.g., Claude Code's `settings.json`).
+- **Hard** — The agent physically cannot access tools outside the governance layer. Achieved via Docker sandboxing, tool allow/deny lists, or custom agent harnesses.
 
-For any MCP-compatible agent not listed above, see the general MCP Proxy setup below.
+</details>
+
+For any MCP-compatible agent not listed above, see [MCP Proxy (General)](#mcp-proxy-general).
 
 ---
 
-## Other Integration Modes
+## Built-in Policies
+
+Production-ready policies in `examples/` — usable out of the box:
+
+| Policy | File | Use Case |
+|--------|------|----------|
+| Coding Agent | [`coding-agent.policy.yaml`](examples/coding-agent.policy.yaml) | AI coding agents operating on a project |
+| DevOps Deploy | [`devops-deploy.policy.yaml`](examples/devops-deploy.policy.yaml) | Deployment agents that build, test, and deploy code |
+| Video Upscaler | [`video-upscaler.policy.yaml`](examples/video-upscaler.policy.yaml) | Media processing agents running upscaling pipelines |
+
+> Validate any policy with: `npx det-acp validate ./policy.yaml`
+
+---
+
+## Integration Modes
+
+| Mode | How It Works | Best For |
+|------|-------------|----------|
+| **MCP Proxy** | Transparent proxy between agent and MCP servers | Cursor, Claude Code, any MCP client |
+| **Shell Proxy** | Command wrapper that validates before executing | CLI agents, shell-based workflows |
+| **HTTP API** | REST endpoints for session management | Any language, custom integrations |
+| **Library SDK** | TypeScript API for in-process governance | Custom TypeScript agents |
 
 ### MCP Proxy (General)
 
-The MCP proxy works with any MCP-compatible client, not just Cursor.
+Works with any MCP-compatible client.
 
-**Simplified mode** — just point it at a policy file and it auto-configures a filesystem backend:
+**Simplified mode** — point at a policy file, auto-configures filesystem backend:
 
 ```bash
 npx det-acp proxy --policy ./policy.yaml
-npx det-acp proxy --policy ./policy.yaml --dir /path/to/project  # custom project dir
+npx det-acp proxy --policy ./policy.yaml --dir /path/to/project
 ```
 
-**Full config mode** — for advanced setups with multiple backends, SSE transport, etc.:
+<details>
+<summary><strong>Full config mode</strong></summary>
+
+For advanced setups with multiple backends, SSE transport, etc.:
 
 ```bash
-# Create a proxy config
 cat > mcp-proxy.config.yaml << 'EOF'
 policy: ./agent.policy.yaml
 ledger_dir: ./.det-acp/ledgers
@@ -196,28 +251,30 @@ backends:
     args: ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
 EOF
 
-# Start the proxy
 npx det-acp proxy ./mcp-proxy.config.yaml
 ```
+
+</details>
 
 ### Shell Proxy
 
 Execute commands through the policy gateway:
 
 ```bash
-# Allowed
-npx det-acp exec ./agent.policy.yaml echo "hello"
-
-# Denied (rm -rf is forbidden)
-npx det-acp exec ./agent.policy.yaml rm -rf /tmp
+npx det-acp exec ./agent.policy.yaml echo "hello"    # Allowed
+npx det-acp exec ./agent.policy.yaml rm -rf /tmp      # Denied (forbidden)
 ```
 
 ### HTTP Session Server
 
 ```bash
-# Start the server
 npx det-acp serve --port 3100
+```
 
+<details>
+<summary><strong>HTTP API Examples</strong></summary>
+
+```bash
 # Create a session
 curl -X POST http://localhost:3100/sessions \
   -H "Content-Type: application/json" \
@@ -237,31 +294,22 @@ curl -X POST http://localhost:3100/sessions/<session-id>/record \
 curl -X POST http://localhost:3100/sessions/<session-id>/terminate
 ```
 
-### CLI
+</details>
+
+### CLI Reference
 
 ```bash
-# Set up governance for an integration (generates all config files)
-npx det-acp init cursor                          # or codex, claude-code
-npx det-acp init cursor --policy ./my-policy.yaml  # use custom policy
-
-# Validate a policy
-npx det-acp validate ./agent.policy.yaml
-
-# Start MCP proxy (simplified — just a policy file)
-npx det-acp proxy --policy ./policy.yaml
-
-# Start MCP proxy (full config file for advanced use)
-npx det-acp proxy ./mcp-proxy.config.yaml
-
-# Execute a command through shell proxy
-npx det-acp exec ./agent.policy.yaml echo "hello"
-
-# View audit report from ledger
-npx det-acp report ./.det-acp/ledgers/<session-id>.jsonl
-
-# Start HTTP session server
-npx det-acp serve
+npx det-acp init <agent>                  # Set up governance (cursor, codex, claude-code)
+npx det-acp init <agent> --policy <file>  # Use custom policy
+npx det-acp validate <policy-file>        # Validate a policy
+npx det-acp proxy --policy <policy-file>  # Start MCP proxy (simplified)
+npx det-acp proxy <config-file>           # Start MCP proxy (full config)
+npx det-acp exec <policy-file> <command>  # Execute via shell proxy
+npx det-acp report <ledger-file>          # View audit report
+npx det-acp serve [--port <port>]         # Start HTTP session server
 ```
+
+---
 
 ## Architecture
 
@@ -269,65 +317,65 @@ npx det-acp serve
 
 ```mermaid
 graph TB
-    subgraph ExternalSystems [External Systems]
+    subgraph External["External Systems"]
         BackendMCP["Backend MCP Servers"]
-        HumanApprover["Human / Webhook Approvers"]
+        Approvers["Human / Webhook Approvers"]
     end
 
-    subgraph IntegrationLayer [Integration Layer]
-        MCPProxy["MCPProxyServer"]
-        ShellProxyNode["ShellProxy"]
-        HTTPServer["HTTP Server - Fastify"]
-        LibrarySDK["Library SDK - TypeScript"]
+    subgraph Integration["Integration Layer"]
+        MCPProxy["MCP Proxy Server"]
+        ShellProxy["Shell Proxy"]
+        HTTPServer["HTTP Server"]
+        LibrarySDK["Library SDK"]
     end
 
-    subgraph CoreEngine [Core Engine]
-        Gateway["AgentGateway"]
-        SessionMgr["SessionManager"]
-        PolicyEval["PolicyEvaluator"]
-        GateMgr["GateManager"]
-        Registry["ActionRegistry"]
+    subgraph Core["Core Engine"]
+        Gateway["Agent Gateway"]
+        SessionMgr["Session Manager"]
+        PolicyEval["Policy Evaluator"]
+        GateMgr["Gate Manager"]
+        ActionReg["Action Registry"]
     end
 
-    subgraph InfraLayer [Infrastructure]
-        Ledger["EvidenceLedger - JSONL + SHA-256 Hash Chain"]
-        Rollback["RollbackManager"]
+    subgraph Infra["Infrastructure"]
+        Ledger["Evidence Ledger<br/>(JSONL + SHA-256)"]
+        Rollback["Rollback Manager"]
     end
 
-    subgraph ToolAdapters [Tool Adapters]
-        FileRead["file:read"]
-        FileWrite["file:write"]
-        CommandRun["command:run"]
-        HttpReq["http:request"]
-        GitDiff["git:diff"]
-        GitApply["git:apply"]
+    subgraph Tools["Tool Adapters"]
+        FR["file:read"]
+        FW["file:write"]
+        CR["command:run"]
+        HR["http:request"]
+        GD["git:diff"]
+        GA["git:apply"]
     end
 
     MCPProxy --> Gateway
-    ShellProxyNode --> Gateway
+    ShellProxy --> Gateway
     HTTPServer --> Gateway
     LibrarySDK --> Gateway
 
     Gateway --> SessionMgr
-    Gateway --> Registry
+    Gateway --> ActionReg
     Gateway --> GateMgr
 
     SessionMgr --> PolicyEval
     SessionMgr --> GateMgr
     SessionMgr --> Ledger
 
-    Registry --> FileRead
-    Registry --> FileWrite
-    Registry --> CommandRun
-    Registry --> HttpReq
-    Registry --> GitDiff
-    Registry --> GitApply
+    ActionReg --> FR
+    ActionReg --> FW
+    ActionReg --> CR
+    ActionReg --> HR
+    ActionReg --> GD
+    ActionReg --> GA
 
-    Rollback --> Registry
+    Rollback --> ActionReg
     Rollback --> Ledger
 
     MCPProxy --> BackendMCP
-    GateMgr --> HumanApprover
+    GateMgr --> Approvers
 ```
 
 ### Action Evaluation Flow
@@ -335,82 +383,75 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant Agent
-    participant Integration as Integration Layer
-    participant Gateway as AgentGateway
-    participant Session as SessionManager
-    participant Policy as PolicyEvaluator
-    participant Gate as GateManager
-    participant Ledger as EvidenceLedger
+    participant Integration
+    participant Gateway as Agent Gateway
+    participant Session as Session Manager
+    participant Policy as Policy Evaluator
+    participant Gate as Gate Manager
+    participant Ledger as Evidence Ledger
 
-    Agent->>Integration: Action request (tool, input)
-    Integration->>Gateway: evaluate(sessionId, action)
-    Gateway->>Session: evaluate(sessionId, action)
+    Agent ->> Integration: Action request (tool, input)
+    Integration ->> Gateway: evaluate(sessionId, action)
+    Gateway ->> Session: evaluate(sessionId, action)
 
-    Session->>Policy: evaluateSessionAction(action, policy, session)
-    Note right of Policy: 1. Session state check<br/>2. Session constraints<br/>(max_actions, rate_limit, escalation)<br/>3. Forbidden patterns<br/>4. Capability + scope<br/>5. Budget limits<br/>6. Gate lookup
-    Policy-->>Session: ValidationResult (allow / deny / gate)
+    Session ->> Policy: evaluateSessionAction(action)
 
-    Session->>Ledger: append("action:evaluate", ...)
+    Note right of Policy: 1. Session state check<br/>2. Rate limits & escalation<br/>3. Forbidden patterns<br/>4. Capability & scope match<br/>5. Budget limits<br/>6. Gate lookup
 
-    alt Verdict is gate
-        Session->>Gate: requestApproval(sessionId, actionId, action, gate)
-        alt Auto or handler resolves
-            Gate-->>Session: approved / rejected
-        else Human approval pending
-            Gate-->>Session: pending
-            Note over Agent,Gate: Session paused until gate resolved
+    Policy -->> Session: allow / deny / gate
+
+    Session ->> Ledger: append(action:evaluate)
+
+    alt Gate required
+        Session ->> Gate: requestApproval(action, gate)
+        alt Approved
+            Gate -->> Session: approved
+        else Pending
+            Gate -->> Session: pending
+            Note over Agent, Gate: Session paused until resolved
         end
     end
 
-    Session-->>Gateway: EvaluateResponse
-    Gateway-->>Integration: decision + reasons
-    Integration-->>Agent: allow / deny / gate
+    Session -->> Gateway: EvaluateResponse
+    Gateway -->> Integration: decision + reasons
+    Integration -->> Agent: allow / deny / gate
 
-    alt Decision is allow
-        Note over Agent: Agent executes action externally
-        Agent->>Integration: recordResult(actionId, result)
-        Integration->>Gateway: recordResult(sessionId, actionId, result)
-        Gateway->>Session: recordResult(sessionId, actionId, result)
-        Session->>Session: Update budget (filesChanged, outputBytes)
-        Session->>Ledger: append("action:result", ...)
+    alt Allowed
+        Note over Agent: Executes action externally
+        Agent ->> Integration: recordResult(actionId, result)
+        Integration ->> Gateway: recordResult(sessionId, actionId, result)
+        Gateway ->> Session: recordResult(result)
+        Session ->> Session: Update budget tracking
+        Session ->> Ledger: append(action:result)
     end
 
     opt Session complete
-        Agent->>Integration: terminateSession()
-        Integration->>Gateway: terminateSession(sessionId)
-        Gateway->>Session: terminate(sessionId)
-        Session->>Ledger: append("session:terminate", ...)
-        Session-->>Gateway: SessionReport
-        Gateway-->>Integration: SessionReport
-        Integration-->>Agent: SessionReport
+        Agent ->> Integration: terminateSession()
+        Integration ->> Gateway: terminate(sessionId)
+        Gateway ->> Session: terminate(sessionId)
+        Session ->> Ledger: append(session:terminate)
+        Session -->> Agent: Session Report
     end
 ```
 
 ### Session Lifecycle
 
-Every interaction is governed through a session:
-
+```mermaid
+stateDiagram-v2
+    [*] --> Created: createSession()
+    Created --> Evaluating: evaluate(action)
+    Evaluating --> Allowed: policy allows
+    Evaluating --> Denied: policy denies
+    Evaluating --> Gated: gate required
+    Gated --> Allowed: approved
+    Gated --> Denied: rejected
+    Allowed --> Recording: recordResult()
+    Recording --> Evaluating: next action
+    Denied --> Evaluating: next action
+    Recording --> Terminated: terminateSession()
+    Evaluating --> Terminated: terminateSession()
+    Terminated --> [*]
 ```
-Create Session → Evaluate Actions → Record Results → Terminate
-                     ↕ (repeat)         ↕ (repeat)
-                 deny / gate
-```
-
-Sessions track:
-
-- Cumulative budget (runtime, files changed, cost)
-- Action history (for rate limiting and escalation)
-- Pending gates (human approval required)
-- Evidence ledger (tamper-evident audit trail)
-
-### Integration Modes
-
-| Mode                  | How it works                                    | Best for                            |
-| --------------------- | ----------------------------------------------- | ----------------------------------- |
-| **MCP Proxy**   | Transparent proxy between agent and MCP servers | Cursor, Claude Code, any MCP client |
-| **Shell Proxy** | Command wrapper that validates before executing | CLI agents, shell-based workflows   |
-| **HTTP API**    | REST endpoints for session management           | Any language, custom integrations   |
-| **Library SDK** | TypeScript API for in-process governance        | Custom TypeScript agents            |
 
 ### Evidence Ledger
 
@@ -424,34 +465,40 @@ Every action produces an immutable audit record in JSONL format with SHA-256 has
 
 If any entry is tampered with, the hash chain breaks and integrity verification fails.
 
-### Policy DSL
+---
 
-Policies define:
+## Policy DSL Reference
 
-| Section          | Purpose                                                          |
-| ---------------- | ---------------------------------------------------------------- |
-| `capabilities` | What tools the agent can use and where                           |
-| `limits`       | Runtime, cost, file change, and retry budgets                    |
-| `gates`        | Actions that require human/webhook approval                      |
-| `evidence`     | What artifacts must be recorded                                  |
-| `forbidden`    | Patterns that are always blocked                                 |
-| `session`      | Session-level constraints (max actions, rate limits, escalation) |
-| `remediation`  | Error handling rules and fallback chains                         |
+| Section | Purpose |
+|---------|---------|
+| `capabilities` | Allowed tools and their scoped paths, binaries, or domains |
+| `limits` | Runtime, cost, file change, and retry budgets |
+| `gates` | Actions requiring human or webhook approval |
+| `evidence` | Artifacts that must be recorded (checksums, diffs) |
+| `forbidden` | Patterns that are always blocked |
+| `session` | Max actions, rate limits, escalation rules |
+| `remediation` | Error handling rules and fallback chains |
 
-### Built-in Tool Adapters
+See [examples/](examples/) for complete policy files.
 
-| Tool             | Description                                 |
-| ---------------- | ------------------------------------------- |
-| `file:read`    | Read files within scoped paths              |
-| `file:write`   | Write files with backup for rollback        |
-| `command:run`  | Execute allow-listed binaries with timeout  |
-| `http:request` | HTTP requests to allow-listed domains       |
-| `git:diff`     | Get git diff output                         |
-| `git:apply`    | Apply git patches with stash-based rollback |
+---
 
-### Custom Tool Adapters
+## Built-in Tool Adapters
 
-Extend the `ToolAdapter` base class:
+| Tool | Description |
+|------|-------------|
+| `file:read` | Read files within scoped paths |
+| `file:write` | Write files with backup for rollback |
+| `command:run` | Execute allow-listed binaries with timeout |
+| `http:request` | HTTP requests to allow-listed domains |
+| `git:diff` | Get git diff output |
+| `git:apply` | Apply git patches with stash-based rollback |
+
+---
+
+## Custom Tool Adapters
+
+Extend the `ToolAdapter` base class to add your own tools:
 
 ```typescript
 import { ToolAdapter } from 'deterministic-agent-control-protocol';
@@ -471,22 +518,32 @@ class MyCustomTool extends ToolAdapter {
 gateway.getRegistry().register(new MyCustomTool());
 ```
 
+---
+
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Type check
-npm run lint
-
-# Run tests
-npm test
-
-# Build
-npm run build
+npm install          # Install dependencies
+npm run lint         # Type check (TypeScript strict)
+npm test             # Run tests (Vitest)
+npm run build        # Build
 ```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. **Fork** the repository and create a feature branch
+2. **Follow** the coding standards (TypeScript strict, ESM, Zod validation)
+3. **Write tests** mirroring `src/` structure under `tests/`
+4. **Run** `npm test && npm run lint` before submitting
+5. **Use** [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
+6. **Open a PR** with a clear description of changes
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE)
