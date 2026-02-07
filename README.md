@@ -16,7 +16,7 @@
 
 Works transparently with **Cursor**, **Claude Code**, **Codex**, and any MCP-compatible agent. Also supports shell command governance and a language-agnostic HTTP API.
 
-https://github.com/user-attachments/assets/3c34d5fa-4138-4172-931a-6c5ff1b0da61
+https://github.com/user-attachments/assets/ec7a9524-1527-4e51-b837-7e05a24b189d
 
 ---
 
