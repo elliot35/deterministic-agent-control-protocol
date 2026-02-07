@@ -1,0 +1,339 @@
+name: CI & Publish
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Lint, Test, Build
+  # ──────────────────────────────────────────────
+  ci:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (TypeScript type check)
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  # ──────────────────────────────────────────────
+  # Job 2: Validate commit conventions (PRs only)
+  # ──────────────────────────────────────────────
+  validate-commits:
+    name: Validate Commit Conventions
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate PR commits follow Conventional Commits
+        run: |
+          echo "🔍 Checking commits in this PR follow Conventional Commits..."
+          echo ""
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          COMMITS=$(git log --format="%s" "$BASE_SHA..$HEAD_SHA")
+
+          VALID_PATTERN="^(feat|fix|refactor|test|docs|chore|perf|ci)(\([a-z/\-]+\))?(!)?: .+"
+          HAS_ERROR=false
+
+          while IFS= read -r msg; do
+            [ -z "$msg" ] && continue
+            if echo "$msg" | grep -qE "$VALID_PATTERN"; then
+              echo "  ✅ $msg"
+            else
+              echo "  ❌ $msg"
+              HAS_ERROR=true
+            fi
+          done <<< "$COMMITS"
+
+          echo ""
+          if [ "$HAS_ERROR" = true ]; then
+            echo "❌ Some commits do not follow Conventional Commits format."
+            echo ""
+            echo "Expected: <type>(<scope>): <description>"
+            echo "Types: feat, fix, refactor, test, docs, chore, perf, ci"
+            echo "Scopes: engine, policy, ledger, proxy, tools, cli, server, rollback, integration/<name>, examples"
+            echo ""
+            echo "Examples:"
+            echo "  feat(engine): add rate limiting per tool type"
+            echo "  fix(ledger): correct hash chain validation"
+            echo "  refactor!(engine): redesign session lifecycle"
+            exit 1
+          fi
+
+          echo "✅ All commits follow Conventional Commits format."
+
+  # ──────────────────────────────────────────────
+  # Job 3: Version bump check, validation & publish
+  # ──────────────────────────────────────────────
+  publish:
+    name: Validate Version & Publish
+    runs-on: ubuntu-latest
+    needs: ci
+    # Only run on pushes to main (not on PRs)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Detect version bump
+        id: version-check
+        run: |
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+
+          echo "local_version=$LOCAL_VERSION" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+
+          echo "📦 Package: $PACKAGE_NAME"
+          echo "📋 Local version: $LOCAL_VERSION"
+
+          # Fetch the latest published version from npm
+          PUBLISHED_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "0.0.0")
+          echo "🌐 Published version: $PUBLISHED_VERSION"
+          echo "published_version=$PUBLISHED_VERSION" >> "$GITHUB_OUTPUT"
+
+          # Determine if version changed and the bump type
+          node -e "
+            const local = '$LOCAL_VERSION'.split('.').map(Number);
+            const published = '$PUBLISHED_VERSION'.split('.').map(Number);
+
+            const isNewer =
+              local[0] > published[0] ||
+              (local[0] === published[0] && local[1] > published[1]) ||
+              (local[0] === published[0] && local[1] === published[1] && local[2] > published[2]);
+
+            let bumpType = 'none';
+            if (isNewer) {
+              if (local[0] > published[0]) bumpType = 'major';
+              else if (local[1] > published[1]) bumpType = 'minor';
+              else if (local[2] > published[2]) bumpType = 'patch';
+            }
+
+            const fs = require('fs');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'version_changed=' + (isNewer ? 'true' : 'false') + '\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'actual_bump=' + bumpType + '\n');
+
+            console.log('📊 Version changed: ' + isNewer);
+            console.log('📊 Actual bump type: ' + bumpType);
+            if (isNewer) {
+              console.log('✅ Version bumped: $PUBLISHED_VERSION → $LOCAL_VERSION (' + bumpType + ')');
+            } else {
+              console.log('⏭️  Version not bumped ($LOCAL_VERSION <= $PUBLISHED_VERSION)');
+            }
+          "
+
+      - name: Validate version bump against commit types
+        id: validate-bump
+        env:
+          ACTUAL_BUMP: ${{ steps.version-check.outputs.actual_bump }}
+          VERSION_CHANGED: ${{ steps.version-check.outputs.version_changed }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: |
+          echo "──────────────────────────────────────────────"
+          echo "🔍 Validating version bump against commit types"
+          echo "──────────────────────────────────────────────"
+          echo ""
+
+          # ── 1. Gather commit messages from this push ──
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            COMMIT_MESSAGES=$(git log --format="%s" -1 "$AFTER_SHA")
+          else
+            COMMIT_MESSAGES=$(git log --format="%s" "$BEFORE_SHA..$AFTER_SHA")
+          fi
+
+          echo "📝 Commits in this push:"
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            echo "   • $line"
+          done <<< "$COMMIT_MESSAGES"
+          echo ""
+
+          # ── 2. Parse conventional commit types ──
+          #
+          # Semver rules (from project dev standards):
+          #   MAJOR  → breaking changes / re-architecture  (any type with !)
+          #   MINOR  → new features / integrations         (feat)
+          #   PATCH  → bug fixes, perf, refactors          (fix, perf, refactor)
+          #   NONE   → docs, tests, chore, ci              (docs, test, chore, ci)
+
+          REQUIRED_BUMP="none"
+          DETECTED_TYPES=""
+
+          while IFS= read -r msg; do
+            [ -z "$msg" ] && continue
+
+            # Check for breaking change indicator (! before colon)
+            if echo "$msg" | grep -qE "^[a-z]+(\([^)]*\))?!:"; then
+              REQUIRED_BUMP="major"
+              TYPE=$(echo "$msg" | grep -oE "^[a-z]+")
+              DETECTED_TYPES="${DETECTED_TYPES} ${TYPE}!(BREAKING)"
+              continue
+            fi
+
+            # Extract conventional commit type
+            TYPE=$(echo "$msg" | grep -oE "^[a-z]+" || true)
+
+            case "$TYPE" in
+              feat)
+                DETECTED_TYPES="${DETECTED_TYPES} feat"
+                if [ "$REQUIRED_BUMP" != "major" ]; then
+                  REQUIRED_BUMP="minor"
+                fi
+                ;;
+              fix|perf|refactor)
+                DETECTED_TYPES="${DETECTED_TYPES} ${TYPE}"
+                if [ "$REQUIRED_BUMP" = "none" ]; then
+                  REQUIRED_BUMP="patch"
+                fi
+                ;;
+              docs|test|chore|ci)
+                DETECTED_TYPES="${DETECTED_TYPES} ${TYPE}"
+                # No version bump required for these types
+                ;;
+              *)
+                DETECTED_TYPES="${DETECTED_TYPES} unknown(${msg:0:20})"
+                ;;
+            esac
+          done <<< "$COMMIT_MESSAGES"
+
+          echo "🏷️  Detected types:${DETECTED_TYPES}"
+          echo "📋 Required minimum bump: $REQUIRED_BUMP"
+          echo "📊 Actual bump: $ACTUAL_BUMP"
+          echo ""
+          echo "required_bump=$REQUIRED_BUMP" >> "$GITHUB_OUTPUT"
+
+          # ── 3. Bump level comparison ──
+          bump_level() {
+            case "$1" in
+              major) echo 3 ;;
+              minor) echo 2 ;;
+              patch) echo 1 ;;
+              *)     echo 0 ;;
+            esac
+          }
+
+          REQUIRED_LEVEL=$(bump_level "$REQUIRED_BUMP")
+          ACTUAL_LEVEL=$(bump_level "$ACTUAL_BUMP")
+
+          # ── 4. Validate ──
+
+          # Case: no bump required and no bump made → OK, skip publish
+          if [ "$REQUIRED_LEVEL" -eq 0 ] && [ "$ACTUAL_LEVEL" -eq 0 ]; then
+            echo "✅ No version bump required (docs/test/chore/ci changes only). Publish will be skipped."
+            exit 0
+          fi
+
+          # Case: bump required but version was not bumped → FAIL
+          if [ "$REQUIRED_LEVEL" -gt 0 ] && [ "$ACTUAL_LEVEL" -eq 0 ]; then
+            echo "❌ FAILED: Commits require a ${REQUIRED_BUMP} version bump, but the version was not bumped."
+            echo ""
+            echo "Bump the version in package.json before merging:"
+            echo "  • major bump  →  breaking changes or re-architecture  (type!: ...)"
+            echo "  • minor bump  →  new features or integrations         (feat: ...)"
+            echo "  • patch bump  →  bug fixes, perf, refactors           (fix/perf/refactor: ...)"
+            exit 1
+          fi
+
+          # Case: bump was made but at insufficient level → FAIL
+          if [ "$REQUIRED_LEVEL" -gt "$ACTUAL_LEVEL" ]; then
+            echo "❌ FAILED: Version bump level is insufficient!"
+            echo "   Commits require at least a ${REQUIRED_BUMP} bump, but only a ${ACTUAL_BUMP} bump was applied."
+            echo ""
+            echo "Project semver rules:"
+            echo "  • MAJOR  →  breaking changes  (commit with '!' e.g. feat!:, refactor!:)"
+            echo "  • MINOR  →  new features      (feat:)"
+            echo "  • PATCH  →  bug fixes          (fix:, perf:, refactor:)"
+            echo ""
+            echo "A ${REQUIRED_BUMP} bump (or higher) is needed for this set of changes."
+            exit 1
+          fi
+
+          # Case: bump level is sufficient → PASS
+          if [ "$REQUIRED_LEVEL" -le "$ACTUAL_LEVEL" ]; then
+            echo "✅ Version bump is valid: ${ACTUAL_BUMP} bump satisfies the required ${REQUIRED_BUMP} minimum."
+          fi
+
+      - name: Publish to npm
+        if: steps.version-check.outputs.version_changed == 'true'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        if: always()
+        env:
+          VERSION_CHANGED: ${{ steps.version-check.outputs.version_changed }}
+          PACKAGE_NAME: ${{ steps.version-check.outputs.package_name }}
+          LOCAL_VERSION: ${{ steps.version-check.outputs.local_version }}
+          PUBLISHED_VERSION: ${{ steps.version-check.outputs.published_version }}
+          ACTUAL_BUMP: ${{ steps.version-check.outputs.actual_bump }}
+          REQUIRED_BUMP: ${{ steps.validate-bump.outputs.required_bump }}
+        run: |
+          if [ "$VERSION_CHANGED" = "true" ]; then
+            echo "### 🚀 Published to npm" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Package | \`${PACKAGE_NAME}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Version | \`${LOCAL_VERSION}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Previous | \`${PUBLISHED_VERSION}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Bump type | \`${ACTUAL_BUMP}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Required (from commits) | \`${REQUIRED_BUMP}\` |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ⏭️ Publish skipped" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Version \`${LOCAL_VERSION}\` is not newer than published \`${PUBLISHED_VERSION}\`." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "To trigger a publish, bump the version in \`package.json\` before merging." >> "$GITHUB_STEP_SUMMARY"
+          fi
