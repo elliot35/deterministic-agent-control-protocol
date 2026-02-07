@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="det-acp logo" width="280" />
+</p>
+
 # Deterministic Agent Control Protocol
 
 [![Stars](https://img.shields.io/github/stars/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/stargazers)
