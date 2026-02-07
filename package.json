@@ -1,0 +1,92 @@
+{
+  "name": "@det-acp/core",
+  "version": "0.2.0",
+  "description": "Agent Governance Gateway — bounded, auditable, session-aware control for AI agents with MCP proxy, shell proxy, and HTTP API",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./policy": {
+      "types": "./dist/policy/loader.d.ts",
+      "import": "./dist/policy/loader.js"
+    },
+    "./server": {
+      "types": "./dist/server/server.d.ts",
+      "import": "./dist/server/server.js"
+    }
+  },
+  "bin": {
+    "det-acp": "dist/cli/index.js"
+  },
+  "files": [
+    "dist/",
+    "schemas/",
+    "examples/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "start:server": "node dist/server/server.js",
+    "generate:schema": "node dist/schemas/generate.js",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "keywords": [
+    "agent",
+    "governance",
+    "safety",
+    "control-protocol",
+    "audit",
+    "policy",
+    "mcp",
+    "cursor",
+    "claude-code",
+    "gateway",
+    "session",
+    "ai-agent",
+    "model-context-protocol",
+    "deterministic"
+  ],
+  "author": "det-acp",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/det-acp/agent-control-plane.git"
+  },
+  "homepage": "https://github.com/det-acp/agent-control-plane#readme",
+  "bugs": {
+    "url": "https://github.com/det-acp/agent-control-plane/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "commander": "^14.0.3",
+    "fastify": "^5.7.4",
+    "js-yaml": "^4.1.1",
+    "minimatch": "^10.1.2",
+    "nanoid": "^3.3.11",
+    "pino": "^10.3.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.2.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18",
+    "zod-to-json-schema": "^3.25.1"
+  }
+}

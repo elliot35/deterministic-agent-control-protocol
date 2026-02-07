@@ -1,0 +1,34 @@
+# MCP Proxy Configuration
+#
+# This config file tells the MCP proxy how to connect to backend MCP servers
+# and which policy to enforce on all tool calls.
+#
+# Usage: det-acp proxy ./mcp-proxy.config.yaml
+
+# Policy to enforce on all proxied tool calls
+policy: ./coding-agent.policy.yaml
+
+# Directory for evidence ledger files
+ledger_dir: ./.det-acp/ledgers
+
+# Transport to expose to the agent (stdio for local, sse for remote)
+transport: stdio
+
+# Backend MCP servers to proxy tool calls to
+backends:
+  - name: filesystem
+    transport: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
+
+  - name: github
+    transport: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+
+# Optional metadata attached to every session
+session_metadata:
+  source: mcp-proxy
+  project: my-project

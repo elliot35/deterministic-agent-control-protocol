@@ -1,0 +1,19 @@
+# Codex CLI config template with Deterministic Agent Control Protocol governance
+#
+# Copy this to .codex/config.toml (project-scoped) or ~/.codex/config.toml (global)
+# and edit the paths to match your machine.
+#
+# See: https://github.com/openai/codex
+
+# Use workspace-write sandbox for OS-level filesystem restrictions
+sandbox_mode = "workspace-write"
+
+# Register the Deterministic Agent Control Protocol MCP proxy as an MCP server.
+# Codex will discover tools from this server and route tool calls through the proxy.
+[mcp_servers.governed-filesystem]
+command = "node"
+args = [
+  "/absolute/path/to/deterministic-agent-control-protocol/dist/cli/index.js",
+  "proxy",
+  "/absolute/path/to/codex-mcp-proxy.yaml"
+]

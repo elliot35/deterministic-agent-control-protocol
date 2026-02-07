@@ -1,0 +1,64 @@
+# Cursor governance policy
+# Governs what the filesystem MCP server can do when used through the proxy
+
+version: "1.0"
+name: "cursor-governance"
+description: "Policy governing Cursor's access to filesystem via MCP proxy"
+
+capabilities:
+  # Read operations (allowed)
+  - tool: "read_file"
+    scope: {}
+  - tool: "read_text_file"
+    scope: {}
+  - tool: "read_multiple_files"
+    scope: {}
+  - tool: "read_media_file"
+    scope: {}
+
+  # Write/edit operations (allowed)
+  - tool: "write_file"
+    scope: {}
+  - tool: "edit_file"
+    scope: {}
+
+  # Directory listing (allowed)
+  - tool: "list_directory"
+    scope: {}
+  - tool: "list_directory_with_sizes"
+    scope: {}
+  - tool: "list_allowed_directories"
+    scope: {}
+
+  # Search (allowed)
+  - tool: "search_files"
+    scope: {}
+  - tool: "get_file_info"
+    scope: {}
+
+  # Intentionally NOT including these — they will be DENIED:
+  #   - create_directory
+  #   - move_file
+  #   - directory_tree
+
+limits:
+  max_runtime_ms: 3600000  # 1 hour for interactive Cursor sessions
+
+gates: []
+
+evidence:
+  require: []
+  format: "jsonl"
+
+forbidden:
+  - pattern: "**/.env"
+  - pattern: "**/.env.*"
+  - pattern: "**/secrets*"
+  - pattern: "**/credentials*"
+  - pattern: "**/.git/config"
+
+session:
+  max_actions: 200
+  max_denials: 30
+  rate_limit:
+    max_per_minute: 60

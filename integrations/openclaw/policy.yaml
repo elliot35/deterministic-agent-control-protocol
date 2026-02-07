@@ -1,0 +1,73 @@
+# OpenClaw governance policy
+# Governs tool execution via the HTTP Session API
+
+version: "1.0"
+name: "openclaw-governance"
+description: "Policy governing OpenClaw's tool execution via HTTP API"
+
+capabilities:
+  # File read operations
+  - tool: "read_text_file"
+    scope: {}
+  - tool: "read_file"
+    scope: {}
+
+  # File write/edit operations
+  - tool: "write_file"
+    scope: {}
+  - tool: "edit_file"
+    scope: {}
+
+  # Directory operations
+  - tool: "list_directory"
+    scope: {}
+
+  # Shell commands (scoped to safe binaries)
+  - tool: "command:run"
+    scope:
+      binaries: ["ls", "cat", "echo", "npm", "node", "git", "tsc", "python3"]
+
+  # HTTP requests (scoped to allowed domains)
+  - tool: "http:request"
+    scope:
+      domains: ["api.github.com", "registry.npmjs.org"]
+      methods: ["GET"]
+
+  # Intentionally NOT including:
+  #   - create_directory
+  #   - move_file
+  #   - file:delete
+
+limits:
+  max_runtime_ms: 3600000  # 1 hour
+  max_files_changed: 50
+
+gates:
+  - action: "command:run"
+    approval: "human"
+    risk_level: "high"
+    condition: "outside_scope"
+
+evidence:
+  require: []
+  format: "jsonl"
+
+forbidden:
+  - pattern: "**/.env"
+  - pattern: "**/.env.*"
+  - pattern: "**/secrets*"
+  - pattern: "**/credentials*"
+  - pattern: "**/.git/config"
+  - pattern: "rm -rf"
+  - pattern: "sudo"
+
+session:
+  max_actions: 500
+  max_denials: 50
+  rate_limit:
+    max_per_minute: 120
+  escalation:
+    - after_actions: 100
+      require: human_checkin
+    - after_minutes: 30
+      require: human_checkin

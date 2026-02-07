@@ -1,0 +1,107 @@
+# DevOps Deployment Agent Policy
+# Constrains a deployment agent to operate within safe boundaries.
+
+version: "1.0"
+name: "devops-deploy"
+description: "Policy for a deployment agent that builds, tests, and deploys application code."
+
+capabilities:
+  - tool: "file:read"
+    scope:
+      paths:
+        - "/app/**"
+        - "/config/**"
+
+  - tool: "file:write"
+    scope:
+      paths:
+        - "/app/dist/**"
+        - "/tmp/deploy-work/**"
+
+  - tool: "command:run"
+    scope:
+      binaries:
+        - "npm"
+        - "node"
+        - "docker"
+        - "kubectl"
+        - "git"
+        - "curl"
+
+  - tool: "git:diff"
+    scope:
+      repos:
+        - "/app"
+
+  - tool: "git:apply"
+    scope:
+      repos:
+        - "/app"
+
+  - tool: "http:request"
+    scope:
+      domains:
+        - "registry.npmjs.org"
+        - "api.github.com"
+        - "k8s.internal.yourcompany.com"
+      methods:
+        - "GET"
+        - "POST"
+
+limits:
+  max_runtime_ms: 600000       # 10 minutes
+  max_output_bytes: 1073741824 # 1 GB
+  max_files_changed: 200
+  max_retries: 2
+  max_cost_usd: 5.0
+
+gates:
+  - action: "command:run"
+    approval: "human"
+    risk_level: "high"
+    condition: "outside_scope"
+
+  - action: "http:request"
+    approval: "human"
+    risk_level: "high"
+
+  - action: "file:delete"
+    approval: "human"
+    risk_level: "critical"
+
+evidence:
+  require:
+    - "diffs"
+    - "checksums"
+    - "exit_codes"
+    - "logs"
+  format: "jsonl"
+
+forbidden:
+  - pattern: "rm -rf /"
+  - pattern: "**/.env"
+  - pattern: "**/credentials*"
+  - pattern: "**/secrets/**"
+  - pattern: "kubectl delete namespace"
+
+session:
+  max_actions: 100
+  max_denials: 10
+  rate_limit:
+    max_per_minute: 30
+  escalation:
+    - after_actions: 30
+      require: human_checkin
+    - after_minutes: 5
+      require: human_checkin
+
+remediation:
+  rules:
+    - match: "npm ERR!"
+      action: "retry"
+    - match: "docker: Error"
+      action: "abort"
+    - match: "kubectl error"
+      action: "abort"
+    - match: "ECONNREFUSED"
+      action: "retry"

@@ -1,0 +1,86 @@
+# Video Upscaler Agent Policy
+# This policy constrains a video upscaling agent to operate safely.
+
+version: "1.0"
+name: "video-upscaler"
+description: "Policy for a video upscaling agent that reads input video files, runs upscaling binaries, and writes output files."
+
+capabilities:
+  - tool: "file:read"
+    scope:
+      paths:
+        - "/data/in/**"
+        - "/data/models/**"
+
+  - tool: "file:write"
+    scope:
+      paths:
+        - "/data/out/**"
+        - "/tmp/agent-work/**"
+
+  - tool: "command:run"
+    scope:
+      binaries:
+        - "ffmpeg"
+        - "realesrgan-ncnn-vulkan"
+        - "video2x"
+        - "ffprobe"
+
+  - tool: "http:request"
+    scope:
+      domains:
+        - "downloads.yourcompany.com"
+        - "models.yourcompany.com"
+      methods:
+        - "GET"
+
+limits:
+  max_runtime_ms: 1800000      # 30 minutes
+  max_output_bytes: 5368709120  # 5 GB
+  max_files_changed: 50
+  max_retries: 3
+
+gates:
+  - action: "file:delete"
+    approval: "human"
+    risk_level: "high"
+
+  - action: "command:run"
+    approval: "auto"
+    risk_level: "medium"
+
+evidence:
+  require:
+    - "diffs"
+    - "checksums"
+    - "exit_codes"
+  format: "jsonl"
+
+forbidden:
+  - pattern: "rm -rf"
+  - pattern: "**/.env"
+  - pattern: "**/secrets/**"
+  - pattern: "/etc/**"
+  - pattern: "/usr/**"
+
+session:
+  max_actions: 50
+  max_denials: 5
+  escalation:
+    - after_minutes: 15
+      require: human_checkin
+
+remediation:
+  rules:
+    - match: "CUDA out of memory"
+      action: "fallback:vulkan"
+    - match: "Vulkan device not found"
+      action: "fallback:cpu"
+    - match: "disk full"
+      action: "abort"
+    - match: "permission denied"
+      action: "abort"
+  fallback_chain:
+    - "cuda"
+    - "vulkan"
+    - "cpu"

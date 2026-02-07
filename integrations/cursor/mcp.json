@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "governed-filesystem": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/deterministic-agent-control-protocol/dist/cli/index.js",
+        "proxy",
+        "/absolute/path/to/mcp-proxy.yaml"
+      ]
+    }
+  }
+}

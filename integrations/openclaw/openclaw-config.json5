@@ -1,0 +1,41 @@
+// OpenClaw configuration snippet for Deterministic Agent Control Protocol governance
+// Merge these settings into your ~/.openclaw/openclaw.json
+//
+// This configures:
+// 1. Docker sandboxing for all tool execution
+// 2. Tool restrictions to limit available binaries
+// 3. Environment variables for the governance skill
+//
+// See: https://openclaw.ai/
+
+{
+  // Enable Docker sandboxing for all tool execution
+  "sandbox": {
+    "mode": "all",
+    "workspaceAccess": "rw",
+    "network": false
+  },
+
+  // Restrict available exec binaries
+  "exec": {
+    "safeBins": [
+      "ls", "cat", "echo", "head", "tail", "wc",
+      "npm", "node", "npx", "tsc",
+      "git", "python3", "pip3",
+      "curl"
+    ]
+  },
+
+  // Environment variables passed to the agent
+  "env": {
+    "DET_ACP_URL": "http://localhost:3100",
+    "DET_ACP_SESSION_ID": ""
+  },
+
+  // Skill loading configuration
+  "skills": {
+    "load": {
+      "extraDirs": []
+    }
+  }
+}

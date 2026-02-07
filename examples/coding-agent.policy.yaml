@@ -1,0 +1,80 @@
+version: "1.0"
+name: "coding-agent"
+description: "Policy for AI coding agents (Cursor, Claude Code, Codex) operating on a project"
+
+capabilities:
+  - tool: "file:read"
+    scope:
+      paths:
+        - "./src/**"
+        - "./tests/**"
+        - "./package.json"
+        - "./tsconfig.json"
+        - "./README.md"
+  - tool: "file:write"
+    scope:
+      paths:
+        - "./src/**"
+        - "./tests/**"
+  - tool: "command:run"
+    scope:
+      binaries:
+        - "npm"
+        - "npx"
+        - "node"
+        - "tsc"
+        - "git"
+        - "echo"
+        - "cat"
+        - "ls"
+  - tool: "git:diff"
+    scope:
+      repos: ["."]
+  - tool: "git:apply"
+    scope:
+      repos: ["."]
+
+limits:
+  max_runtime_ms: 1800000    # 30 minutes
+  max_files_changed: 30
+  max_output_bytes: 10485760  # 10MB
+  max_cost_usd: 5.0
+
+gates:
+  - action: "command:run"
+    approval: "human"
+    risk_level: "high"
+    condition: "outside_scope"
+
+evidence:
+  require: ["checksums", "diffs"]
+  format: "jsonl"
+
+forbidden:
+  - pattern: "**/.env"
+  - pattern: "**/.env.*"
+  - pattern: "**/credentials*"
+  - pattern: "**/secrets*"
+  - pattern: "curl | sh"
+  - pattern: "wget | sh"
+  - pattern: "npm publish"
+  - pattern: "git push --force"
+
+session:
+  max_actions: 200
+  max_denials: 20
+  rate_limit:
+    max_per_minute: 60
+  escalation:
+    - after_actions: 50
+      require: human_checkin
+    - after_minutes: 15
+      require: human_checkin
+
+remediation:
+  rules:
+    - match: "ENOENT"
+      action: "retry"
+    - match: "EACCES"
+      action: "abort"
+  fallback_chain: ["retry", "skip", "abort"]

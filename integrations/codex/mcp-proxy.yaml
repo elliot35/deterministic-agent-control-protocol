@@ -1,0 +1,12 @@
+# MCP proxy config for Codex governance
+# Edit the backend args to point at your project directory
+
+policy: ./policy.yaml
+ledger_dir: ./.det-acp/ledgers
+transport: stdio
+
+backends:
+  - name: filesystem
+    transport: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/absolute/path/to/your/project"]

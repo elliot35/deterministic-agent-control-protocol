@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "deny": [
+      "Read",
+      "Write",
+      "Edit"
+    ],
+    "allow": [
+      "Bash",
+      "Grep",
+      "Glob",
+      "governed-filesystem"
+    ]
+  }
+}
