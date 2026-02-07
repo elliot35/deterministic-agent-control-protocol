@@ -244,7 +244,7 @@ The root `README.md` must follow this open-source-ready structure:
 [![Forks](https://img.shields.io/github/forks/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/network/members)
 [![Contributors](https://img.shields.io/github/contributors/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/graphs/contributors)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/deterministic-agent-control-protocol)](https://www.npmjs.com/package/deterministic-agent-control-protocol)
+[![npm version](https://img.shields.io/npm/v/@det-acp/core)](https://www.npmjs.com/package/@det-acp/core)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/-Node.js-339933?logo=node.js&logoColor=white)
 ```

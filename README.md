@@ -4,7 +4,7 @@
 [![Forks](https://img.shields.io/github/forks/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/network/members)
 [![Contributors](https://img.shields.io/github/contributors/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/graphs/contributors)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/deterministic-agent-control-protocol)](https://www.npmjs.com/package/@det-acp/core)
+[![npm version](https://img.shields.io/npm/v/@det-acp/core)](https://www.npmjs.com/package/@det-acp/core)
 ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/-Node.js-339933?logo=node.js&logoColor=white)
 
@@ -68,7 +68,7 @@ The protocol **does not execute** actions itself. It evaluates them against a po
 ### Install
 
 ```bash
-npm install deterministic-agent-control-protocol
+npm i @det-acp/core
 ```
 
 ### Set Up Governance (One Command)
@@ -139,7 +139,7 @@ session:
 ### Use as a Library
 
 ```typescript
-import { AgentGateway } from 'deterministic-agent-control-protocol';
+import { AgentGateway } from '@det-acp/core';
 
 const gateway = await AgentGateway.create({
   ledgerDir: './ledgers',
@@ -501,7 +501,7 @@ See [examples/](examples/) for complete policy files.
 Extend the `ToolAdapter` base class to add your own tools:
 
 ```typescript
-import { ToolAdapter } from 'deterministic-agent-control-protocol';
+import { ToolAdapter } from '@det-acp/core';
 
 class MyCustomTool extends ToolAdapter {
   name = 'custom:mytool';

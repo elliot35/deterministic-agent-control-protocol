@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { AgentGateway } from 'deterministic-agent-control-protocol';
+ * import { AgentGateway } from '@det-acp/core';
  *
  * const gateway = await AgentGateway.create({ ledgerDir: './ledgers' });
  * const session = await gateway.createSession('./policy.yaml');
