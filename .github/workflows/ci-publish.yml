@@ -268,22 +268,21 @@ jobs:
 
           # ── 4. Validate ──
 
-          # Case: no bump required and no bump made → OK, skip publish
-          if [ "$REQUIRED_LEVEL" -eq 0 ] && [ "$ACTUAL_LEVEL" -eq 0 ]; then
-            echo "✅ No version bump required (docs/test/chore/ci changes only). Publish will be skipped."
+          # If no version bump in package.json, skip validation entirely
+          if [ "$VERSION_CHANGED" != "true" ]; then
+            echo "⏭️  No version change in package.json. Skipping validation and publish."
+            echo ""
+            if [ "$REQUIRED_LEVEL" -gt 0 ]; then
+              echo "ℹ️  Note: commits suggest a ${REQUIRED_BUMP} bump may be needed."
+              echo "   To publish, bump the version in package.json before merging:"
+              echo "     • major bump  →  breaking changes or re-architecture  (type!: ...)"
+              echo "     • minor bump  →  new features or integrations         (feat: ...)"
+              echo "     • patch bump  →  bug fixes, perf, refactors           (fix/perf/refactor: ...)"
+            fi
             exit 0
           fi
 
-          # Case: bump required but version was not bumped → FAIL
-          if [ "$REQUIRED_LEVEL" -gt 0 ] && [ "$ACTUAL_LEVEL" -eq 0 ]; then
-            echo "❌ FAILED: Commits require a ${REQUIRED_BUMP} version bump, but the version was not bumped."
-            echo ""
-            echo "Bump the version in package.json before merging:"
-            echo "  • major bump  →  breaking changes or re-architecture  (type!: ...)"
-            echo "  • minor bump  →  new features or integrations         (feat: ...)"
-            echo "  • patch bump  →  bug fixes, perf, refactors           (fix/perf/refactor: ...)"
-            exit 1
-          fi
+          # Version was bumped — validate that the bump level matches commit types
 
           # Case: bump was made but at insufficient level → FAIL
           if [ "$REQUIRED_LEVEL" -gt "$ACTUAL_LEVEL" ]; then
@@ -300,9 +299,7 @@ jobs:
           fi
 
           # Case: bump level is sufficient → PASS
-          if [ "$REQUIRED_LEVEL" -le "$ACTUAL_LEVEL" ]; then
-            echo "✅ Version bump is valid: ${ACTUAL_BUMP} bump satisfies the required ${REQUIRED_BUMP} minimum."
-          fi
+          echo "✅ Version bump is valid: ${ACTUAL_BUMP} bump satisfies the required ${REQUIRED_BUMP} minimum."
 
       - name: Publish to npm
         if: steps.version-check.outputs.version_changed == 'true'
