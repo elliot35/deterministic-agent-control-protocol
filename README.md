@@ -17,7 +17,7 @@
 Works transparently with **Cursor**, **Claude Code**, **Codex**, and any MCP-compatible agent. Also supports shell command governance and a language-agnostic HTTP API.
 
 <p align="center">
-  <video src="assets/det-acp-intro.mp4" width="720" controls></video>
+  <video src="assets/det-acp-intro-s.mp4" width="720" controls></video>
 </p>
 
 ---
