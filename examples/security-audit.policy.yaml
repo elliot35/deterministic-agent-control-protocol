@@ -1,0 +1,152 @@
+# Security Audit Agent Policy
+# Constrains a security auditing agent to read-only operations with
+# tightly controlled write access for reports. The agent can scan
+# code, check for vulnerabilities, inspect configurations, and generate
+# audit reports — but NEVER modify source code or deploy anything.
+
+version: "1.0"
+name: "security-audit"
+description: "Policy for a security audit agent that scans code, checks dependencies, inspects configurations, validates secrets management, and generates audit reports."
+
+capabilities:
+  - tool: "file:read"
+    scope:
+      paths:
+        - "./**"
+
+  - tool: "file:write"
+    scope:
+      paths:
+        - "./audit-reports/**"
+        - "./tmp/audit/**"
+
+  - tool: "file:copy"
+    scope:
+      paths:
+        - "./**"
+
+  - tool: "directory:list"
+    scope:
+      paths:
+        - "./**"
+
+  - tool: "directory:create"
+    scope:
+      paths:
+        - "./audit-reports/**"
+        - "./tmp/audit/**"
+
+  - tool: "command:run"
+    scope:
+      binaries:
+        - "npm"
+        - "npx"
+        - "node"
+        - "git"
+        - "grep"
+        - "find"
+        - "wc"
+        - "cat"
+        - "ls"
+        - "sha256sum"
+        - "openssl"
+        - "semgrep"
+        - "trivy"
+        - "snyk"
+
+  - tool: "git:diff"
+    scope:
+      repos: ["."]
+
+  - tool: "git:status"
+    scope:
+      repos: ["."]
+
+  - tool: "http:request"
+    scope:
+      domains:
+        - "api.github.com"
+        - "registry.npmjs.org"
+        - "osv.dev"
+        - "cve.circl.lu"
+        - "nvd.nist.gov"
+      methods:
+        - "GET"
+
+  - tool: "env:read"
+    scope: {}
+
+  - tool: "network:dns"
+    scope:
+      domains:
+        - "api.github.com"
+        - "registry.npmjs.org"
+        - "osv.dev"
+
+limits:
+  max_runtime_ms: 1800000       # 30 minutes
+  max_output_bytes: 104857600   # 100 MB
+  max_files_changed: 20         # Only report files
+  max_retries: 2
+  max_cost_usd: 5.0
+
+gates:
+  - action: "command:run"
+    approval: "human"
+    risk_level: "high"
+    condition: "outside_scope"
+
+  - action: "http:request"
+    approval: "auto"
+    risk_level: "low"
+
+evidence:
+  require:
+    - "checksums"
+    - "diffs"
+    - "exit_codes"
+    - "logs"
+  format: "jsonl"
+
+forbidden:
+  - pattern: "**/.env"
+  - pattern: "**/.env.*"
+  - pattern: "**/credentials*"
+  - pattern: "**/secrets*"
+  - pattern: "**/private_key*"
+  - pattern: "**/*.pem"
+  - pattern: "**/*.key"
+  - pattern: "rm -rf"
+  - pattern: "curl | sh"
+  - pattern: "wget | sh"
+  - pattern: "npm publish"
+  - pattern: "npm install"
+  - pattern: "git push"
+  - pattern: "git commit"
+  - pattern: "docker run"
+  - pattern: "kubectl"
+  - pattern: "eval("
+  - pattern: "exec("
+
+session:
+  max_actions: 300
+  max_denials: 30
+  rate_limit:
+    max_per_minute: 60
+  escalation:
+    - after_actions: 100
+      require: human_checkin
+    - after_minutes: 15
+      require: human_checkin
+
+remediation:
+  rules:
+    - match: "ENOENT"
+      action: "skip"
+    - match: "EACCES"
+      action: "skip"
+    - match: "ECONNREFUSED"
+      action: "retry"
+    - match: "timeout"
+      action: "retry"
+  fallback_chain: ["retry", "skip", "abort"]

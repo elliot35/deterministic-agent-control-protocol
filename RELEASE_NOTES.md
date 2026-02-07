@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-07
+
+### Added
+
+- **10 new built-in tool adapters** expanding the governance surface from 6 to 16 tools:
+  - `file:delete` — Delete files with full content backup for rollback (previously referenced in policies but no adapter existed)
+  - `file:move` — Move/rename files with rollback to original location
+  - `file:copy` — Copy files with scope enforcement on both source and destination
+  - `directory:list` — List directory contents with recursive support and depth control
+  - `directory:create` — Create directories with `mkdir -p` semantics and rollback
+  - `git:commit` — Stage and commit changes with `git reset --soft` rollback
+  - `git:status` — Read-only git working tree status with structured output
+  - `env:read` — Read environment variables with auto-redaction of sensitive values (keys, tokens, passwords)
+  - `network:dns` — DNS lookups for allow-listed domains with multiple record types (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR)
+  - `archive:extract` — Extract tar/zip archives with tracked file listing for rollback
+- **3 new built-in example policies:**
+  - `data-analyst.policy.yaml` — Data analysis agents processing datasets and generating reports
+  - `security-audit.policy.yaml` — Security scanning agents with read-only source access and strict write controls
+  - `infrastructure-manager.policy.yaml` — Infrastructure management agents with human gates on destructive IaC operations
+- Comprehensive unit tests for all new tool adapters (70+ new test cases)
+- Updated `ToolName` union type with all new tool names
+
+### Changed
+
+- Updated existing example policies (`coding-agent`, `devops-deploy`, `video-upscaler`) to leverage new tool adapters
+- Expanded Built-in Tool Adapters section in README with categorized tables (File, Directory, Git, Network, System)
+- Updated Architecture diagram with organized tool adapter subgroups
+- Expanded Built-in Policies table with tools-used counts
+
+---
+
 ## [0.2.1] - 2026-02-07
 
 ### Added
@@ -49,18 +80,3 @@ Initial tracked release.
 
 ---
 
-## [Unreleased]
-
-### Added
-
-- Development standards skill (`.cursor/skills/dev-standards/`) defining workflow checklists, coding standards, security standards, commit conventions, README standards, and iterative design principles
-- Built-in policy library reference with quality checklist, YAML template, and target policy roadmap
-- This release notes file
-
-### Changed
-
-### Fixed
-
-### Breaking Changes
-
----

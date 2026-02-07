@@ -1,0 +1,209 @@
+# Infrastructure Manager Agent Policy
+# Constrains an infrastructure management agent that handles server
+# configurations, manages deployments, monitors services, and maintains
+# infrastructure-as-code files. Strict human gates on all destructive operations.
+
+version: "1.0"
+name: "infrastructure-manager"
+description: "Policy for an infrastructure management agent that handles configs, deployments, monitoring, and IaC with strict human approval on destructive operations."
+
+capabilities:
+  - tool: "file:read"
+    scope:
+      paths:
+        - "./infrastructure/**"
+        - "./config/**"
+        - "./terraform/**"
+        - "./ansible/**"
+        - "./k8s/**"
+        - "./docker/**"
+        - "./monitoring/**"
+
+  - tool: "file:write"
+    scope:
+      paths:
+        - "./infrastructure/**"
+        - "./config/**"
+        - "./terraform/**"
+        - "./ansible/**"
+        - "./k8s/**"
+        - "./docker/**"
+        - "./monitoring/**"
+        - "./tmp/infra/**"
+
+  - tool: "file:copy"
+    scope:
+      paths:
+        - "./infrastructure/**"
+        - "./config/**"
+        - "./tmp/infra/**"
+
+  - tool: "file:move"
+    scope:
+      paths:
+        - "./infrastructure/**"
+        - "./config/**"
+        - "./tmp/infra/**"
+
+  - tool: "file:delete"
+    scope:
+      paths:
+        - "./tmp/infra/**"
+
+  - tool: "directory:list"
+    scope:
+      paths:
+        - "./**"
+
+  - tool: "directory:create"
+    scope:
+      paths:
+        - "./infrastructure/**"
+        - "./config/**"
+        - "./tmp/infra/**"
+
+  - tool: "command:run"
+    scope:
+      binaries:
+        - "terraform"
+        - "ansible"
+        - "ansible-playbook"
+        - "kubectl"
+        - "docker"
+        - "docker-compose"
+        - "helm"
+        - "git"
+        - "ssh"
+        - "scp"
+        - "curl"
+        - "jq"
+        - "yq"
+        - "cat"
+        - "ls"
+
+  - tool: "git:diff"
+    scope:
+      repos: ["."]
+
+  - tool: "git:status"
+    scope:
+      repos: ["."]
+
+  - tool: "git:commit"
+    scope:
+      repos: ["."]
+
+  - tool: "git:apply"
+    scope:
+      repos: ["."]
+
+  - tool: "http:request"
+    scope:
+      domains:
+        - "api.github.com"
+        - "registry.terraform.io"
+        - "k8s.internal.yourcompany.com"
+        - "monitoring.internal.yourcompany.com"
+        - "vault.internal.yourcompany.com"
+      methods:
+        - "GET"
+        - "POST"
+        - "PUT"
+
+  - tool: "env:read"
+    scope: {}
+
+  - tool: "network:dns"
+    scope:
+      domains:
+        - "api.github.com"
+        - "registry.terraform.io"
+        - "k8s.internal.yourcompany.com"
+
+  - tool: "archive:extract"
+    scope:
+      paths:
+        - "./tmp/infra/**"
+
+limits:
+  max_runtime_ms: 1800000       # 30 minutes
+  max_output_bytes: 536870912   # 512 MB
+  max_files_changed: 100
+  max_retries: 2
+  max_cost_usd: 10.0
+
+gates:
+  - action: "file:delete"
+    approval: "human"
+    risk_level: "critical"
+
+  - action: "file:move"
+    approval: "human"
+    risk_level: "high"
+
+  - action: "git:commit"
+    approval: "human"
+    risk_level: "high"
+
+  - action: "command:run"
+    approval: "human"
+    risk_level: "high"
+    condition: "outside_scope"
+
+  - action: "http:request"
+    approval: "human"
+    risk_level: "high"
+    condition: "POST|PUT"
+
+evidence:
+  require:
+    - "checksums"
+    - "diffs"
+    - "exit_codes"
+    - "logs"
+  format: "jsonl"
+
+forbidden:
+  - pattern: "**/.env"
+  - pattern: "**/.env.*"
+  - pattern: "**/credentials*"
+  - pattern: "**/secrets*"
+  - pattern: "**/private_key*"
+  - pattern: "**/*.pem"
+  - pattern: "**/*.key"
+  - pattern: "rm -rf /"
+  - pattern: "terraform destroy"
+  - pattern: "kubectl delete namespace"
+  - pattern: "kubectl delete --all"
+  - pattern: "docker system prune"
+  - pattern: "ansible-playbook --extra-vars"
+  - pattern: "curl | sh"
+  - pattern: "wget | sh"
+  - pattern: "git push --force"
+
+session:
+  max_actions: 200
+  max_denials: 15
+  rate_limit:
+    max_per_minute: 30
+  escalation:
+    - after_actions: 50
+      require: human_checkin
+    - after_minutes: 10
+      require: human_checkin
+
+remediation:
+  rules:
+    - match: "terraform error"
+      action: "abort"
+    - match: "ansible fatal"
+      action: "abort"
+    - match: "kubectl error"
+      action: "retry"
+    - match: "ECONNREFUSED"
+      action: "retry"
+    - match: "permission denied"
+      action: "abort"
+    - match: "timeout"
+      action: "retry"
+  fallback_chain: ["retry", "abort"]

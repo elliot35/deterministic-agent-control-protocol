@@ -95,17 +95,37 @@ export class ActionRegistry {
 export async function createDefaultRegistry(): Promise<ActionRegistry> {
   const { FileReadAdapter } = await import('../tools/file-read.js');
   const { FileWriteAdapter } = await import('../tools/file-write.js');
+  const { FileDeleteAdapter } = await import('../tools/file-delete.js');
+  const { FileMoveAdapter } = await import('../tools/file-move.js');
+  const { FileCopyAdapter } = await import('../tools/file-copy.js');
+  const { DirectoryListAdapter } = await import('../tools/directory-list.js');
+  const { DirectoryCreateAdapter } = await import('../tools/directory-create.js');
   const { CommandRunAdapter } = await import('../tools/command-run.js');
   const { HttpRequestAdapter } = await import('../tools/http-request.js');
   const { GitDiffAdapter, GitApplyAdapter } = await import('../tools/git.js');
+  const { GitCommitAdapter } = await import('../tools/git-commit.js');
+  const { GitStatusAdapter } = await import('../tools/git-status.js');
+  const { EnvReadAdapter } = await import('../tools/env-read.js');
+  const { NetworkDnsAdapter } = await import('../tools/network-dns.js');
+  const { ArchiveExtractAdapter } = await import('../tools/archive-extract.js');
 
   const registry = new ActionRegistry();
   registry.register(new FileReadAdapter());
   registry.register(new FileWriteAdapter());
+  registry.register(new FileDeleteAdapter());
+  registry.register(new FileMoveAdapter());
+  registry.register(new FileCopyAdapter());
+  registry.register(new DirectoryListAdapter());
+  registry.register(new DirectoryCreateAdapter());
   registry.register(new CommandRunAdapter());
   registry.register(new HttpRequestAdapter());
   registry.register(new GitDiffAdapter());
   registry.register(new GitApplyAdapter());
+  registry.register(new GitCommitAdapter());
+  registry.register(new GitStatusAdapter());
+  registry.register(new EnvReadAdapter());
+  registry.register(new NetworkDnsAdapter());
+  registry.register(new ArchiveExtractAdapter());
 
   return registry;
 }

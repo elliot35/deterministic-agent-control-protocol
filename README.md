@@ -204,11 +204,14 @@ For any MCP-compatible agent not listed above, see [MCP Proxy (General)](#mcp-pr
 
 Production-ready policies in `examples/` — usable out of the box:
 
-| Policy | File | Use Case |
-|--------|------|----------|
-| Coding Agent | [`coding-agent.policy.yaml`](examples/coding-agent.policy.yaml) | AI coding agents operating on a project |
-| DevOps Deploy | [`devops-deploy.policy.yaml`](examples/devops-deploy.policy.yaml) | Deployment agents that build, test, and deploy code |
-| Video Upscaler | [`video-upscaler.policy.yaml`](examples/video-upscaler.policy.yaml) | Media processing agents running upscaling pipelines |
+| Policy | File | Use Case | Tools Used |
+|--------|------|----------|------------|
+| Coding Agent | [`coding-agent.policy.yaml`](examples/coding-agent.policy.yaml) | AI coding agents operating on a project | 13 tools |
+| DevOps Deploy | [`devops-deploy.policy.yaml`](examples/devops-deploy.policy.yaml) | Deployment agents that build, test, and deploy code | 16 tools |
+| Video Upscaler | [`video-upscaler.policy.yaml`](examples/video-upscaler.policy.yaml) | Media processing agents running upscaling pipelines | 11 tools |
+| Data Analyst | [`data-analyst.policy.yaml`](examples/data-analyst.policy.yaml) | Data analysis agents processing datasets and generating reports | 12 tools |
+| Security Audit | [`security-audit.policy.yaml`](examples/security-audit.policy.yaml) | Security scanning agents auditing code and dependencies | 11 tools |
+| Infrastructure Manager | [`infrastructure-manager.policy.yaml`](examples/infrastructure-manager.policy.yaml) | Infrastructure management agents handling IaC, deployments, and monitoring | 16 tools |
 
 > Validate any policy with: `npx det-acp validate ./policy.yaml`
 
@@ -343,12 +346,30 @@ graph TB
     end
 
     subgraph Tools["Tool Adapters"]
-        FR["file:read"]
-        FW["file:write"]
-        CR["command:run"]
-        HR["http:request"]
-        GD["git:diff"]
-        GA["git:apply"]
+        subgraph FileTools["File Operations"]
+            FR["file:read"]
+            FW["file:write"]
+            FD["file:delete"]
+            FM["file:move"]
+            FC["file:copy"]
+        end
+        subgraph DirTools["Directory Operations"]
+            DL["directory:list"]
+            DC["directory:create"]
+        end
+        subgraph GitTools["Git Operations"]
+            GD["git:diff"]
+            GA["git:apply"]
+            GC["git:commit"]
+            GS["git:status"]
+        end
+        subgraph NetTools["Network & System"]
+            CR["command:run"]
+            HR["http:request"]
+            ND["network:dns"]
+            ER["env:read"]
+            AE["archive:extract"]
+        end
     end
 
     MCPProxy --> Gateway
@@ -364,12 +385,10 @@ graph TB
     SessionMgr --> GateMgr
     SessionMgr --> Ledger
 
-    ActionReg --> FR
-    ActionReg --> FW
-    ActionReg --> CR
-    ActionReg --> HR
-    ActionReg --> GD
-    ActionReg --> GA
+    ActionReg --> FileTools
+    ActionReg --> DirTools
+    ActionReg --> GitTools
+    ActionReg --> NetTools
 
     Rollback --> ActionReg
     Rollback --> Ledger
@@ -485,14 +504,51 @@ See [examples/](examples/) for complete policy files.
 
 ## Built-in Tool Adapters
 
-| Tool | Description |
-|------|-------------|
-| `file:read` | Read files within scoped paths |
-| `file:write` | Write files with backup for rollback |
-| `command:run` | Execute allow-listed binaries with timeout |
-| `http:request` | HTTP requests to allow-listed domains |
-| `git:diff` | Get git diff output |
-| `git:apply` | Apply git patches with stash-based rollback |
+### File Operations
+
+| Tool | Description | Rollback |
+|------|-------------|----------|
+| `file:read` | Read files within scoped paths | N/A (read-only) |
+| `file:write` | Write files with backup for rollback | Restores previous content |
+| `file:delete` | Delete files within scoped paths | Restores file from backup |
+| `file:move` | Move/rename files within scoped paths | Moves file back to original location |
+| `file:copy` | Copy files within scoped paths | Removes copied file |
+
+### Directory Operations
+
+| Tool | Description | Rollback |
+|------|-------------|----------|
+| `directory:list` | List files and directories within scoped paths | N/A (read-only) |
+| `directory:create` | Create directories within scoped paths | Removes created directories |
+
+### Command Execution
+
+| Tool | Description | Rollback |
+|------|-------------|----------|
+| `command:run` | Execute allow-listed binaries with timeout | Compensation actions |
+
+### Git Operations
+
+| Tool | Description | Rollback |
+|------|-------------|----------|
+| `git:diff` | Get git diff output | N/A (read-only) |
+| `git:apply` | Apply git patches with stash-based rollback | `git checkout . && git stash pop` |
+| `git:commit` | Stage and commit changes | `git reset --soft HEAD~1` |
+| `git:status` | Get working tree status | N/A (read-only) |
+
+### Network & HTTP
+
+| Tool | Description | Rollback |
+|------|-------------|----------|
+| `http:request` | HTTP requests to allow-listed domains | Compensation actions |
+| `network:dns` | DNS lookups for allow-listed domains | N/A (read-only) |
+
+### Environment & System
+
+| Tool | Description | Rollback |
+|------|-------------|----------|
+| `env:read` | Read environment variables with auto-redaction of secrets | N/A (read-only) |
+| `archive:extract` | Extract tar/zip archives within scoped paths | Removes extracted files |
 
 ---
 
@@ -502,11 +558,15 @@ Extend the `ToolAdapter` base class to add your own tools:
 
 ```typescript
 import { ToolAdapter } from '@det-acp/core';
+import { z } from 'zod';
 
 class MyCustomTool extends ToolAdapter {
-  name = 'custom:mytool';
-  description = 'My custom tool';
-  inputSchema = z.object({ /* ... */ });
+  readonly name = 'custom:mytool';
+  readonly description = 'My custom tool';
+  readonly inputSchema = z.object({
+    target: z.string().min(1),
+    options: z.record(z.string()).optional(),
+  });
 
   validate(input, policy) { /* ... */ }
   async dryRun(input, ctx) { /* ... */ }
@@ -517,6 +577,8 @@ class MyCustomTool extends ToolAdapter {
 // Register it
 gateway.getRegistry().register(new MyCustomTool());
 ```
+
+Every tool adapter follows the execution lifecycle: **validate** -> **dryRun** -> **(gate check)** -> **execute** -> **verify**. Each step is recorded in the evidence ledger.
 
 ---
 

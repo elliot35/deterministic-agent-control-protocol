@@ -18,6 +18,37 @@ capabilities:
         - "/data/out/**"
         - "/tmp/agent-work/**"
 
+  - tool: "file:delete"
+    scope:
+      paths:
+        - "/data/out/**"
+        - "/tmp/agent-work/**"
+
+  - tool: "file:copy"
+    scope:
+      paths:
+        - "/data/in/**"
+        - "/data/out/**"
+        - "/tmp/agent-work/**"
+
+  - tool: "file:move"
+    scope:
+      paths:
+        - "/data/out/**"
+        - "/tmp/agent-work/**"
+
+  - tool: "directory:list"
+    scope:
+      paths:
+        - "/data/**"
+        - "/tmp/agent-work/**"
+
+  - tool: "directory:create"
+    scope:
+      paths:
+        - "/data/out/**"
+        - "/tmp/agent-work/**"
+
   - tool: "command:run"
     scope:
       binaries:
@@ -34,6 +65,12 @@ capabilities:
       methods:
         - "GET"
 
+  - tool: "archive:extract"
+    scope:
+      paths:
+        - "/data/models/**"
+        - "/tmp/agent-work/**"
+
 limits:
   max_runtime_ms: 1800000      # 30 minutes
   max_output_bytes: 5368709120  # 5 GB
@@ -45,9 +82,17 @@ gates:
     approval: "human"
     risk_level: "high"
 
+  - action: "file:move"
+    approval: "auto"
+    risk_level: "low"
+
   - action: "command:run"
     approval: "auto"
     risk_level: "medium"
+
+  - action: "archive:extract"
+    approval: "auto"
+    risk_level: "low"
 
 evidence:
   require:

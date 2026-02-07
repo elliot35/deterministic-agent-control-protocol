@@ -40,9 +40,19 @@ export { evaluateAction, evaluateSessionAction, assessRiskLevel } from './policy
 export { ToolAdapter } from './tools/base.js';
 export { FileReadAdapter } from './tools/file-read.js';
 export { FileWriteAdapter } from './tools/file-write.js';
+export { FileDeleteAdapter } from './tools/file-delete.js';
+export { FileMoveAdapter } from './tools/file-move.js';
+export { FileCopyAdapter } from './tools/file-copy.js';
+export { DirectoryListAdapter } from './tools/directory-list.js';
+export { DirectoryCreateAdapter } from './tools/directory-create.js';
 export { CommandRunAdapter } from './tools/command-run.js';
 export { HttpRequestAdapter } from './tools/http-request.js';
 export { GitDiffAdapter, GitApplyAdapter } from './tools/git.js';
+export { GitCommitAdapter } from './tools/git-commit.js';
+export { GitStatusAdapter } from './tools/git-status.js';
+export { EnvReadAdapter } from './tools/env-read.js';
+export { NetworkDnsAdapter } from './tools/network-dns.js';
+export { ArchiveExtractAdapter } from './tools/archive-extract.js';
 
 // Action registry
 export { ActionRegistry, createDefaultRegistry } from './engine/action-registry.js';

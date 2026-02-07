@@ -1,0 +1,160 @@
+# Data Analyst Agent Policy
+# Constrains a data analysis agent operating on datasets, generating reports,
+# and querying external APIs — while preventing data exfiltration and
+# unauthorized modifications to source data.
+
+version: "1.0"
+name: "data-analyst"
+description: "Policy for a data analysis agent that reads datasets, runs analysis scripts, generates reports, and queries external data APIs."
+
+capabilities:
+  - tool: "file:read"
+    scope:
+      paths:
+        - "./data/**"
+        - "./config/**"
+        - "./scripts/**"
+        - "./templates/**"
+
+  - tool: "file:write"
+    scope:
+      paths:
+        - "./output/**"
+        - "./reports/**"
+        - "./tmp/**"
+
+  - tool: "file:copy"
+    scope:
+      paths:
+        - "./data/**"
+        - "./output/**"
+
+  - tool: "file:delete"
+    scope:
+      paths:
+        - "./tmp/**"
+        - "./output/**"
+
+  - tool: "directory:list"
+    scope:
+      paths:
+        - "./data/**"
+        - "./output/**"
+        - "./reports/**"
+        - "./scripts/**"
+
+  - tool: "directory:create"
+    scope:
+      paths:
+        - "./output/**"
+        - "./reports/**"
+        - "./tmp/**"
+
+  - tool: "command:run"
+    scope:
+      binaries:
+        - "python"
+        - "python3"
+        - "pip"
+        - "Rscript"
+        - "node"
+        - "npx"
+        - "cat"
+        - "wc"
+        - "head"
+        - "tail"
+        - "sort"
+
+  - tool: "http:request"
+    scope:
+      domains:
+        - "api.census.gov"
+        - "api.worldbank.org"
+        - "data.gov"
+        - "api.data.yourcompany.com"
+      methods:
+        - "GET"
+
+  - tool: "env:read"
+    scope: {}
+
+  - tool: "archive:extract"
+    scope:
+      paths:
+        - "./data/**"
+        - "./tmp/**"
+
+  - tool: "network:dns"
+    scope:
+      domains:
+        - "api.census.gov"
+        - "api.worldbank.org"
+        - "data.gov"
+
+limits:
+  max_runtime_ms: 3600000       # 60 minutes (analysis can be long)
+  max_output_bytes: 536870912   # 512 MB
+  max_files_changed: 100
+  max_retries: 3
+  max_cost_usd: 10.0
+
+gates:
+  - action: "file:delete"
+    approval: "human"
+    risk_level: "medium"
+
+  - action: "http:request"
+    approval: "auto"
+    risk_level: "low"
+
+  - action: "command:run"
+    approval: "auto"
+    risk_level: "medium"
+    condition: "outside_scope"
+
+evidence:
+  require:
+    - "checksums"
+    - "diffs"
+    - "exit_codes"
+    - "logs"
+  format: "jsonl"
+
+forbidden:
+  - pattern: "**/.env"
+  - pattern: "**/.env.*"
+  - pattern: "**/credentials*"
+  - pattern: "**/secrets*"
+  - pattern: "**/passwords*"
+  - pattern: "curl | sh"
+  - pattern: "wget | sh"
+  - pattern: "rm -rf /"
+  - pattern: "pip install --user"
+  - pattern: "POST"
+  - pattern: "PUT"
+  - pattern: "DELETE"
+
+session:
+  max_actions: 500
+  max_denials: 30
+  rate_limit:
+    max_per_minute: 60
+  escalation:
+    - after_actions: 200
+      require: human_checkin
+    - after_minutes: 30
+      require: human_checkin
+
+remediation:
+  rules:
+    - match: "FileNotFoundError"
+      action: "retry"
+    - match: "MemoryError"
+      action: "abort"
+    - match: "ECONNREFUSED"
+      action: "retry"
+    - match: "disk full"
+      action: "abort"
+    - match: "permission denied"
+      action: "abort"
+  fallback_chain: ["retry", "skip", "abort"]

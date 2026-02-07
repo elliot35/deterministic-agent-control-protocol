@@ -18,6 +18,37 @@ capabilities:
         - "/app/dist/**"
         - "/tmp/deploy-work/**"
 
+  - tool: "file:delete"
+    scope:
+      paths:
+        - "/app/dist/**"
+        - "/tmp/deploy-work/**"
+
+  - tool: "file:copy"
+    scope:
+      paths:
+        - "/app/**"
+        - "/config/**"
+        - "/tmp/deploy-work/**"
+
+  - tool: "file:move"
+    scope:
+      paths:
+        - "/app/dist/**"
+        - "/tmp/deploy-work/**"
+
+  - tool: "directory:list"
+    scope:
+      paths:
+        - "/app/**"
+        - "/config/**"
+
+  - tool: "directory:create"
+    scope:
+      paths:
+        - "/app/dist/**"
+        - "/tmp/deploy-work/**"
+
   - tool: "command:run"
     scope:
       binaries:
@@ -38,6 +69,16 @@ capabilities:
       repos:
         - "/app"
 
+  - tool: "git:status"
+    scope:
+      repos:
+        - "/app"
+
+  - tool: "git:commit"
+    scope:
+      repos:
+        - "/app"
+
   - tool: "http:request"
     scope:
       domains:
@@ -47,6 +88,21 @@ capabilities:
       methods:
         - "GET"
         - "POST"
+
+  - tool: "env:read"
+    scope: {}
+
+  - tool: "network:dns"
+    scope:
+      domains:
+        - "registry.npmjs.org"
+        - "api.github.com"
+        - "k8s.internal.yourcompany.com"
+
+  - tool: "archive:extract"
+    scope:
+      paths:
+        - "/tmp/deploy-work/**"
 
 limits:
   max_runtime_ms: 600000       # 10 minutes
@@ -68,6 +124,18 @@ gates:
   - action: "file:delete"
     approval: "human"
     risk_level: "critical"
+
+  - action: "file:move"
+    approval: "human"
+    risk_level: "high"
+
+  - action: "git:commit"
+    approval: "human"
+    risk_level: "high"
+
+  - action: "archive:extract"
+    approval: "auto"
+    risk_level: "medium"
 
 evidence:
   require:

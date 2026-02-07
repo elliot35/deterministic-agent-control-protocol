@@ -16,6 +16,30 @@ capabilities:
       paths:
         - "./src/**"
         - "./tests/**"
+  - tool: "file:delete"
+    scope:
+      paths:
+        - "./src/**"
+        - "./tests/**"
+  - tool: "file:move"
+    scope:
+      paths:
+        - "./src/**"
+        - "./tests/**"
+  - tool: "file:copy"
+    scope:
+      paths:
+        - "./src/**"
+        - "./tests/**"
+  - tool: "directory:list"
+    scope:
+      paths:
+        - "./**"
+  - tool: "directory:create"
+    scope:
+      paths:
+        - "./src/**"
+        - "./tests/**"
   - tool: "command:run"
     scope:
       binaries:
@@ -33,6 +57,14 @@ capabilities:
   - tool: "git:apply"
     scope:
       repos: ["."]
+  - tool: "git:status"
+    scope:
+      repos: ["."]
+  - tool: "git:commit"
+    scope:
+      repos: ["."]
+  - tool: "env:read"
+    scope: {}
 
 limits:
   max_runtime_ms: 1800000    # 30 minutes
@@ -41,6 +73,18 @@ limits:
   max_cost_usd: 5.0
 
 gates:
+  - action: "file:delete"
+    approval: "human"
+    risk_level: "high"
+
+  - action: "file:move"
+    approval: "auto"
+    risk_level: "medium"
+
+  - action: "git:commit"
+    approval: "auto"
+    risk_level: "medium"
+
   - action: "command:run"
     approval: "human"
     risk_level: "high"

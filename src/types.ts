@@ -9,7 +9,24 @@
 // Policy Types
 // ---------------------------------------------------------------------------
 
-export type ToolName = 'file:read' | 'file:write' | 'file:delete' | 'command:run' | 'http:request' | 'git:diff' | 'git:apply' | (string & {});
+export type ToolName =
+  | 'file:read'
+  | 'file:write'
+  | 'file:delete'
+  | 'file:move'
+  | 'file:copy'
+  | 'directory:list'
+  | 'directory:create'
+  | 'command:run'
+  | 'http:request'
+  | 'git:diff'
+  | 'git:apply'
+  | 'git:commit'
+  | 'git:status'
+  | 'env:read'
+  | 'network:dns'
+  | 'archive:extract'
+  | (string & {});
 
 export type ApprovalMode = 'auto' | 'human' | 'webhook';
 
