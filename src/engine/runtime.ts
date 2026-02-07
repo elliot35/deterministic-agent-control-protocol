@@ -201,10 +201,61 @@ export class AgentGateway {
   // ---------------------------------------------------------------------------
 
   private loadPolicy(policySource: string): Policy {
-    // Check if it's inline YAML (contains newlines or colons)
-    if (policySource.includes('\n') || policySource.includes(':')) {
-      return parsePolicyYaml(policySource);
+    if (this.isFilePath(policySource)) {
+      return loadPolicyFromFile(policySource);
     }
-    return loadPolicyFromFile(policySource);
+    return parsePolicyYaml(policySource);
+  }
+
+  /**
+   * Determine whether policySource looks like a file path rather than inline YAML.
+   *
+   * A file path never contains newlines and typically matches one of:
+   *   - Windows absolute path  (e.g. C:\Users\...\policy.yaml  or  D:/policies/p.yaml)
+   *   - Unix absolute path     (e.g. /home/user/policy.yaml)
+   *   - Relative path          (e.g. ./policy.yaml  or  ../policies/p.yaml)
+   *   - Bare filename / path with YAML extension  (e.g. policy.yaml)
+   *   - Any single-line string without colons (can't be YAML key:value)
+   *
+   * The previous heuristic (`source.includes(':')` → inline YAML) broke on Windows
+   * because drive letters like C: contain a colon.
+   */
+  private isFilePath(source: string): boolean {
+    // Inline YAML always spans multiple lines; a file path never does
+    if (source.includes('\n')) {
+      return false;
+    }
+
+    // Windows absolute path: drive letter followed by :\ or :/
+    if (/^[A-Za-z]:[/\\]/.test(source)) {
+      return true;
+    }
+
+    // Unix absolute path
+    if (source.startsWith('/')) {
+      return true;
+    }
+
+    // Relative paths (Unix or Windows separators)
+    if (
+      source.startsWith('./') ||
+      source.startsWith('../') ||
+      source.startsWith('.\\') ||
+      source.startsWith('..\\')
+    ) {
+      return true;
+    }
+
+    // Ends with a YAML file extension
+    if (/\.ya?ml$/i.test(source)) {
+      return true;
+    }
+
+    // No colons at all → cannot be a YAML key:value pair, treat as a file path
+    if (!source.includes(':')) {
+      return true;
+    }
+
+    return false;
   }
 }

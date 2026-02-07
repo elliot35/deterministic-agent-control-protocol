@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-02-08
+
+### Fixed
+
+- **Windows path compatibility in `loadPolicy`** — File paths with Windows drive letters (e.g. `C:\Users\...\policy.yaml`) were misidentified as inline YAML because the heuristic checked for colons (`:`). Replaced the naive colon check with a robust `isFilePath` detector that correctly handles Windows absolute paths, Unix absolute paths, relative paths, and YAML file extensions.
+
+---
+
 ## [0.3.0] - 2026-02-07
 
 ### Added

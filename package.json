@@ -1,6 +1,6 @@
 {
   "name": "@det-acp/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Agent Governance Gateway — bounded, auditable, session-aware control for AI agents with MCP proxy, shell proxy, and HTTP API",
   "type": "module",
   "main": "dist/index.js",

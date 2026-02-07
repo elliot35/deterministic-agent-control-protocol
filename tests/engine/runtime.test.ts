@@ -165,6 +165,33 @@ describe('AgentGateway', () => {
     expect(integrity.totalEntries).toBeGreaterThan(0);
   });
 
+  it('should treat Windows absolute paths as file paths, not inline YAML', async () => {
+    const gateway = await AgentGateway.create({ ledgerDir });
+    // Windows paths contain colons (C:\...) which previously triggered inline YAML parsing.
+    // The fix should detect the drive letter and attempt to load from file,
+    // throwing "Policy file not found" instead of a YAML/validation error.
+    const windowsPath = 'C:\\Users\\testuser\\policies\\policy.yaml';
+
+    await expect(gateway.createSession(windowsPath)).rejects.toThrow(
+      /Policy file not found/,
+    );
+  });
+
+  it('should treat Windows forward-slash paths as file paths, not inline YAML', async () => {
+    const gateway = await AgentGateway.create({ ledgerDir });
+    const windowsPath = 'D:/Projects/my-app/governance/policy.yaml';
+
+    await expect(gateway.createSession(windowsPath)).rejects.toThrow(
+      /Policy file not found/,
+    );
+  });
+
+  it('should still parse inline YAML containing colons', async () => {
+    const gateway = await AgentGateway.create({ ledgerDir });
+    const session = await gateway.createSession(POLICY_YAML);
+    expect(session.policy.name).toBe('test-gateway-policy');
+  });
+
   it('should invoke onStateChange callback', async () => {
     const transitions: string[] = [];
     const gateway = await AgentGateway.create({
