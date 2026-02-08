@@ -26,3 +26,6 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Repo admin scripts
+scripts/repo-protection.sh
