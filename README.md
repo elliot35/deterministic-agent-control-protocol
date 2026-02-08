@@ -16,6 +16,36 @@
 
 Works transparently with **Cursor**, **Claude Code**, **Codex**, and any MCP-compatible agent. Also supports shell command governance and a language-agnostic HTTP API.
 
+### 🛡️ Governance in Action
+
+<table>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="assets/mcp-config.gif" alt="Setting up governance rule in Cursor" width="80%" />
+      <br />
+      <b>1. Set Up Governance Rule</b>
+      <br />
+      <sub>Enable the governance rule in Cursor's settings to protect your workspace.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/block-access-env.gif" alt="Blocking .env file access" width="90%" />
+      <br />
+      <b>2. Block Secrets Exfiltration</b>
+      <br />
+      <sub>Agent attempts to read <code>.env</code> and write secrets — blocked instantly.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/partial-block.gif" alt="Blocking credential search" width="90%" />
+      <br />
+      <b>3. Block Credential Scanning</b>
+      <br />
+      <sub>Agent tries to search for credentials and secrets files — denied by policy.</sub>
+    </td>
+  </tr>
+</table>
+
 https://github.com/user-attachments/assets/ec7a9524-1527-4e51-b837-7e05a24b189d
 
 ---
