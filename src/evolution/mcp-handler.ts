@@ -124,12 +124,7 @@ export class McpEvolutionHandler {
       `[Policy Evolution] Suggested change: ${suggestion.description}`,
       `Suggestion ID: ${suggestionId}`,
       '',
-      'Present this suggestion to the user and ask for their decision:',
-      '  - "add-to-policy" — permanently add to the policy file',
-      '  - "allow-once" — allow for this session only',
-      '  - "deny" — keep the restriction',
-      '',
-      `Then call the "${TOOL_NAME}" tool with the suggestion_id and their decision.`,
+      'ACTION REQUIRED: Ask the user whether to "add-to-policy", "allow-once", or "deny", then call policy_evolution_approve with the suggestion_id and their decision. If approved, retry the original tool call.',
     ].join('\n');
 
     return {

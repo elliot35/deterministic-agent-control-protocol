@@ -114,8 +114,20 @@ Instead of your built-in tools, you MUST use these governed equivalents:
 4. **ALWAYS** route file edits through \`governed-filesystem\` → \`edit_file\`.
 5. **ALWAYS** route directory listings through \`governed-filesystem\` → \`list_directory\`.
 6. **ALWAYS** route file searches through \`governed-filesystem\` → \`search_files\`.
-7. If a governed tool call is **denied by policy**, you MUST respect the denial. Do NOT attempt to use a built-in tool as a fallback. Report the denial to the user instead.
+7. If a governed tool call is **denied by policy**, you MUST respect the denial. Do NOT attempt to use a built-in tool as a fallback.
 8. If you need a tool that is not available through the governed MCP server, ask the user for permission before proceeding.
+
+## Policy Evolution — MANDATORY
+
+When a governed tool call is **denied** and the response contains a \`Suggestion ID\`, you **MUST** follow this workflow:
+
+1. **STOP** what you are doing. Do NOT skip the suggestion or continue with other tasks.
+2. **PRESENT** the suggested policy change to the user clearly, e.g.: *"The tool \`directory_tree\` was denied because it has no policy. Would you like to add it? Options: add to policy permanently, allow once for this session, or deny."*
+3. **WAIT** for the user to respond with their choice.
+4. **CALL** \`governed-filesystem\` → \`policy_evolution_approve\` with the \`suggestion_id\` from the denial and the user's \`decision\` (\`"add-to-policy"\`, \`"allow-once"\`, or \`"deny"\`).
+5. If the user chose "add-to-policy" or "allow-once", **RETRY** the original tool call that was denied.
+
+**You MUST NOT ignore a Suggestion ID. You MUST NOT continue without asking the user.**
 
 ## Why
 
@@ -153,8 +165,20 @@ Instead of your built-in file tools, you MUST use these governed equivalents:
 4. **ALWAYS** route file edits through \`governed-filesystem\` → \`edit_file\`.
 5. **ALWAYS** route directory listings through \`governed-filesystem\` → \`list_directory\`.
 6. **ALWAYS** route file searches through \`governed-filesystem\` → \`search_files\`.
-7. If a governed tool call is **denied by policy**, you MUST respect the denial. Do NOT attempt to use a built-in tool as a fallback. Report the denial to the user instead.
+7. If a governed tool call is **denied by policy**, you MUST respect the denial. Do NOT attempt to use a built-in tool as a fallback.
 8. If you need a tool that is not available through the governed MCP server, ask the user for permission before proceeding.
+
+## Policy Evolution — MANDATORY
+
+When a governed tool call is **denied** and the response contains a \`Suggestion ID\`, you **MUST** follow this workflow:
+
+1. **STOP** what you are doing. Do NOT skip the suggestion or continue with other tasks.
+2. **PRESENT** the suggested policy change to the user clearly, e.g.: *"The tool \`directory_tree\` was denied because it has no policy. Would you like to add it? Options: add to policy permanently, allow once for this session, or deny."*
+3. **WAIT** for the user to respond with their choice.
+4. **CALL** \`governed-filesystem\` → \`policy_evolution_approve\` with the \`suggestion_id\` from the denial and the user's \`decision\` (\`"add-to-policy"\`, \`"allow-once"\`, or \`"deny"\`).
+5. If the user chose "add-to-policy" or "allow-once", **RETRY** the original tool call that was denied.
+
+**You MUST NOT ignore a Suggestion ID. You MUST NOT continue without asking the user.**
 
 ## Why
 
@@ -188,8 +212,20 @@ Instead of your built-in file tools, you MUST use these governed equivalents:
 
 1. **NEVER** use built-in file read/write/edit tools for any file operation when the governed MCP tools are available.
 2. **ALWAYS** route file operations through the \`governed-filesystem\` MCP server.
-3. If a governed tool call is **denied by policy**, you MUST respect the denial. Do NOT attempt to use a built-in tool as a fallback. Report the denial to the user instead.
+3. If a governed tool call is **denied by policy**, you MUST respect the denial. Do NOT attempt to use a built-in tool as a fallback.
 4. If you need a tool that is not available through the governed MCP server, ask the user for permission before proceeding.
+
+## Policy Evolution — MANDATORY
+
+When a governed tool call is **denied** and the response contains a \`Suggestion ID\`, you **MUST** follow this workflow:
+
+1. **STOP** what you are doing. Do NOT skip the suggestion or continue with other tasks.
+2. **PRESENT** the suggested policy change to the user clearly, e.g.: *"The tool \`directory_tree\` was denied because it has no policy. Would you like to add it? Options: add to policy permanently, allow once for this session, or deny."*
+3. **WAIT** for the user to respond with their choice.
+4. **CALL** \`governed-filesystem\` → \`policy_evolution_approve\` with the \`suggestion_id\` from the denial and the user's \`decision\` (\`"add-to-policy"\`, \`"allow-once"\`, or \`"deny"\`).
+5. If the user chose "add-to-policy" or "allow-once", **RETRY** the original tool call that was denied.
+
+**You MUST NOT ignore a Suggestion ID. You MUST NOT continue without asking the user.**
 
 ## Why
 

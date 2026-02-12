@@ -33,7 +33,7 @@ const program = new Command();
 program
   .name('det-acp')
   .description('Deterministic Agent Control Protocol — Agent Governance Gateway')
-  .version('0.4.0');
+  .version('0.4.2');
 
 // ---------------------------------------------------------------------------
 // validate
