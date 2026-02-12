@@ -359,14 +359,50 @@ When an action is **denied** by the policy, the self-evolution feature can sugge
 ### What it does
 
 - **Analyses denials** — Pattern-matches denial reasons (missing capability, path/binary/domain outside scope, forbidden pattern) and produces a single, minimal policy edit.
-- **Prompts you** — Presents the suggestion (e.g. “Add `file:read` capability for path `./config/**`?”) with a configurable timeout (default 30s).
+- **Prompts you** — Presents the suggestion (e.g. “Add `file:read` capability for path `./config/**`?”) via the agent’s own chat UI.
 - **Three choices:**
   - **Add to policy** — Apply the change to the session’s policy and **persist** it to the policy YAML file.
   - **Allow once** — Apply the change **in memory only** for the current session (no disk write).
   - **Deny** — Keep the block; no change.
-- **Retry** — If you choose “add to policy” or “allow once”, the action is **re-evaluated** against the updated policy and can be allowed in the same request.
+- **Retry** — After approval, the agent retries the original tool call against the updated policy.
 
 Budget and session-limit denials (e.g. “Budget exceeded”, “Rate limit exceeded”) are **not** suggestible; only permission/scope/forbidden denials can trigger evolution.
+
+### How it works (MCP-native)
+
+When running as an MCP proxy (the default for Cursor, Claude Code, and Codex), evolution uses a **two-step asynchronous protocol** built entirely on standard MCP tool calls — no terminal stdin/stdout required:
+
+1. **On deny:** The proxy returns the denial to the agent with a structured suggestion and a unique `suggestion_id`.
+2. **On approve:** The agent presents the suggestion to the user in chat, collects their decision, and calls `policy_evolution_approve` with the `suggestion_id` and decision.
+3. **On retry:** The proxy applies the policy change. The agent retries the original tool call, which now succeeds.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent as Agent (Cursor / Claude Code)
+    participant Proxy as MCP Proxy
+    participant GW as Gateway
+
+    Agent->>Proxy: callTool("read_text_file", path)
+    Proxy->>GW: evaluate()
+    GW-->>Proxy: deny
+    Proxy->>Proxy: suggestPolicyChange()
+    Proxy-->>Agent: Denied + suggestion + suggestionId
+
+    Agent->>User: "read_text_file denied. Add capability for path X?"
+    User-->>Agent: "Yes, add to policy"
+
+    Agent->>Proxy: callTool("policy_evolution_approve", suggestionId, "add-to-policy")
+    Proxy->>Proxy: applyPolicyChange + writePolicyToFile
+    Proxy-->>Agent: "Policy updated"
+
+    Agent->>Proxy: callTool("read_text_file", path)
+    Proxy->>GW: evaluate()
+    GW-->>Proxy: allow
+    Proxy-->>Agent: file contents
+```
+
+This works in **every MCP client** because it uses only the standard MCP tool-call protocol — no readline, no stdin conflicts.
 
 ### Enabling self-evolution
 
@@ -376,7 +412,9 @@ Budget and session-limit denials (e.g. “Budget exceeded”, “Rate limit exce
 npx det-acp proxy --policy ./policy.yaml --evolve
 ```
 
-**Programmatic (library):** pass `policyEvolution` in `GatewayConfig` when creating the gateway:
+> The `init` command includes `--evolve` by default in generated MCP configurations.
+
+**Programmatic (library):** pass `policyEvolution` in `GatewayConfig` for non-MCP setups (e.g. CLI scripts, custom agents):
 
 ```typescript
 import { AgentGateway, createCliEvolutionHandler } from '@det-acp/core';
@@ -401,21 +439,21 @@ flowchart LR
         A["Action Denied"] --> B["Suggestion Engine"]
         B --> C{"Suggestible?"}
         C -->|No| D["Keep Deny"]
-        C -->|Yes| E["PolicySuggestion"]
+        C -->|Yes| E["PolicySuggestion + ID"]
     end
-    E --> F["Handler (CLI / GUI / Webhook)"]
+    E --> F["Agent presents to user"]
     F --> G{"User Decision"}
-    G -->|Add to policy| H["Apply + Write YAML"]
-    G -->|Allow once| I["Apply in-memory only"]
+    G -->|Add to policy| H["policy_evolution_approve → Apply + Write YAML"]
+    G -->|Allow once| I["policy_evolution_approve → Apply in-memory"]
     G -->|Deny| D
-    H --> J["Re-evaluate Action"]
+    H --> J["Retry original tool call"]
     I --> J
     J --> K{"Verdict"}
     K -->|allow| L["Proceed"]
     K -->|deny| D
 ```
 
-The **Suggestion Engine** maps denial reasons to one of: add capability, widen scope (paths/binaries/domains/methods/repos), or remove a forbidden pattern. The **Policy Evolution Manager** runs the handler with a timeout, applies the chosen change to the session policy (and optionally to disk), and the **Session Manager** re-evaluates the same action so the agent can proceed without retrying the tool call.
+The **Suggestion Engine** maps denial reasons to one of: add capability, widen scope (paths/binaries/domains/methods/repos), or remove a forbidden pattern. In MCP proxy mode, the **MCP Evolution Handler** returns the suggestion to the agent as a structured denial with a `suggestion_id`, and the agent calls `policy_evolution_approve` after collecting the user’s decision. In library mode, the **Policy Evolution Manager** uses a pluggable handler (CLI, GUI, webhook) with a configurable timeout and re-evaluates the action inline.
 
 ---
 
@@ -431,7 +469,13 @@ graph TB
     end
 
     subgraph Integration["Integration Layer"]
-        MCPProxy["MCP Proxy Server"]
+        subgraph MCPProxyGroup["MCP Proxy Server"]
+            MCPProxy["MCP Proxy"]
+            subgraph McpEvo["MCP Evolution (optional)"]
+                McpEvoHandler["MCP Evolution Handler"]
+                EvoTool["policy_evolution_approve tool"]
+            end
+        end
         ShellProxy["Shell Proxy"]
         HTTPServer["HTTP Server"]
         LibrarySDK["Library SDK"]
@@ -495,6 +539,10 @@ graph TB
     SessionMgr --> Ledger
     SessionMgr -->|on deny| EvolutionMgr
     EvolutionMgr --> SuggestionEngine
+
+    MCPProxy -->|on deny| McpEvoHandler
+    McpEvoHandler --> SuggestionEngine
+    EvoTool -->|apply change| SessionMgr
 
     ActionReg --> FileTools
     ActionReg --> DirTools
