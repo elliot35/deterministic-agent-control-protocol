@@ -2,7 +2,7 @@
   <img src="assets/logo.png" alt="det-acp logo" width="280" />
 </p>
 
-# Deterministic Agent Control Protocol
+# Self-Evolving Deterministic Agent Control Protocol
 
 [![Stars](https://img.shields.io/github/stars/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/stargazers)
 [![Forks](https://img.shields.io/github/forks/elliot35/deterministic-agent-control-protocol?style=flat)](https://github.com/elliot35/deterministic-agent-control-protocol/network/members)
@@ -90,13 +90,13 @@ The protocol **does not execute** actions itself. It evaluates them against a po
 
 ## Core Principles
 
-| Principle | Description |
-|-----------|-------------|
-| **Bounded** | Agents can only perform allowed actions within allowed scopes |
-| **Session-Aware** | Budget, rate limits, and escalation rules across the full interaction |
-| **Auditable** | Every action logged in a tamper-evident ledger with SHA-256 hash chaining |
-| **Reversible** | Compensation plans for undoing executed actions |
-| **Explainable** | Full reporting — what was allowed, denied, gated, and why |
+| Principle               | Description                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| **Bounded**       | Agents can only perform allowed actions within allowed scopes             |
+| **Session-Aware** | Budget, rate limits, and escalation rules across the full interaction     |
+| **Auditable**     | Every action logged in a tamper-evident ledger with SHA-256 hash chaining |
+| **Reversible**    | Compensation plans for undoing executed actions                           |
+| **Explainable**   | Full reporting — what was allowed, denied, gated, and why                |
 
 ---
 
@@ -217,12 +217,12 @@ console.log(`Allowed: ${report.allowed}, Denied: ${report.denied}`);
 
 Ready-to-use guides for popular AI agents. Each integration includes policy, config templates, governance rules, test sandbox, and step-by-step instructions.
 
-| Agent | Integration Mode | Governance Level | Guide |
-|-------|-----------------|-----------------|-------|
-| **Cursor** | MCP Proxy + Cursor Rules | Soft | [integrations/cursor/](integrations/cursor/) |
-| **Codex CLI** | MCP Proxy + AGENTS.md + OS Sandbox | Soft + Sandbox | [integrations/codex/](integrations/codex/) |
+| Agent                 | Integration Mode                      | Governance Level | Guide                                               |
+| --------------------- | ------------------------------------- | ---------------- | --------------------------------------------------- |
+| **Cursor**      | MCP Proxy + Cursor Rules              | Soft             | [integrations/cursor/](integrations/cursor/)           |
+| **Codex CLI**   | MCP Proxy + AGENTS.md + OS Sandbox    | Soft + Sandbox   | [integrations/codex/](integrations/codex/)             |
 | **Claude Code** | MCP Proxy + CLAUDE.md + settings.json | Soft + Semi-Hard | [integrations/claude-code/](integrations/claude-code/) |
-| **OpenClaw** | HTTP API + Skill + Docker Sandbox | Hard | [integrations/openclaw/](integrations/openclaw/) |
+| **OpenClaw**    | HTTP API + Skill + Docker Sandbox     | Hard             | [integrations/openclaw/](integrations/openclaw/)       |
 
 <details>
 <summary><strong>Governance Levels Explained</strong></summary>
@@ -241,14 +241,14 @@ For any MCP-compatible agent not listed above, see [MCP Proxy (General)](#mcp-pr
 
 Production-ready policies in `examples/` — usable out of the box:
 
-| Policy | File | Use Case | Tools Used |
-|--------|------|----------|------------|
-| Coding Agent | [`coding-agent.policy.yaml`](examples/coding-agent.policy.yaml) | AI coding agents operating on a project | 13 tools |
-| DevOps Deploy | [`devops-deploy.policy.yaml`](examples/devops-deploy.policy.yaml) | Deployment agents that build, test, and deploy code | 16 tools |
-| Video Upscaler | [`video-upscaler.policy.yaml`](examples/video-upscaler.policy.yaml) | Media processing agents running upscaling pipelines | 11 tools |
-| Data Analyst | [`data-analyst.policy.yaml`](examples/data-analyst.policy.yaml) | Data analysis agents processing datasets and generating reports | 12 tools |
-| Security Audit | [`security-audit.policy.yaml`](examples/security-audit.policy.yaml) | Security scanning agents auditing code and dependencies | 11 tools |
-| Infrastructure Manager | [`infrastructure-manager.policy.yaml`](examples/infrastructure-manager.policy.yaml) | Infrastructure management agents handling IaC, deployments, and monitoring | 16 tools |
+| Policy                 | File                                                                               | Use Case                                                                   | Tools Used |
+| ---------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------- |
+| Coding Agent           | [`coding-agent.policy.yaml`](examples/coding-agent.policy.yaml)                     | AI coding agents operating on a project                                    | 13 tools   |
+| DevOps Deploy          | [`devops-deploy.policy.yaml`](examples/devops-deploy.policy.yaml)                   | Deployment agents that build, test, and deploy code                        | 16 tools   |
+| Video Upscaler         | [`video-upscaler.policy.yaml`](examples/video-upscaler.policy.yaml)                 | Media processing agents running upscaling pipelines                        | 11 tools   |
+| Data Analyst           | [`data-analyst.policy.yaml`](examples/data-analyst.policy.yaml)                     | Data analysis agents processing datasets and generating reports            | 12 tools   |
+| Security Audit         | [`security-audit.policy.yaml`](examples/security-audit.policy.yaml)                 | Security scanning agents auditing code and dependencies                    | 11 tools   |
+| Infrastructure Manager | [`infrastructure-manager.policy.yaml`](examples/infrastructure-manager.policy.yaml) | Infrastructure management agents handling IaC, deployments, and monitoring | 16 tools   |
 
 > Validate any policy with: `npx det-acp validate ./policy.yaml`
 
@@ -256,12 +256,12 @@ Production-ready policies in `examples/` — usable out of the box:
 
 ## Integration Modes
 
-| Mode | How It Works | Best For |
-|------|-------------|----------|
-| **MCP Proxy** | Transparent proxy between agent and MCP servers | Cursor, Claude Code, any MCP client |
-| **Shell Proxy** | Command wrapper that validates before executing | CLI agents, shell-based workflows |
-| **HTTP API** | REST endpoints for session management | Any language, custom integrations |
-| **Library SDK** | TypeScript API for in-process governance | Custom TypeScript agents |
+| Mode                  | How It Works                                    | Best For                            |
+| --------------------- | ----------------------------------------------- | ----------------------------------- |
+| **MCP Proxy**   | Transparent proxy between agent and MCP servers | Cursor, Claude Code, any MCP client |
+| **Shell Proxy** | Command wrapper that validates before executing | CLI agents, shell-based workflows   |
+| **HTTP API**    | REST endpoints for session management           | Any language, custom integrations   |
+| **Library SDK** | TypeScript API for in-process governance        | Custom TypeScript agents            |
 
 ### MCP Proxy (General)
 
@@ -599,15 +599,15 @@ If any entry is tampered with, the hash chain breaks and integrity verification 
 
 ## Policy DSL Reference
 
-| Section | Purpose |
-|---------|---------|
+| Section          | Purpose                                                    |
+| ---------------- | ---------------------------------------------------------- |
 | `capabilities` | Allowed tools and their scoped paths, binaries, or domains |
-| `limits` | Runtime, cost, file change, and retry budgets |
-| `gates` | Actions requiring human or webhook approval |
-| `evidence` | Artifacts that must be recorded (checksums, diffs) |
-| `forbidden` | Patterns that are always blocked |
-| `session` | Max actions, rate limits, escalation rules |
-| `remediation` | Error handling rules and fallback chains |
+| `limits`       | Runtime, cost, file change, and retry budgets              |
+| `gates`        | Actions requiring human or webhook approval                |
+| `evidence`     | Artifacts that must be recorded (checksums, diffs)         |
+| `forbidden`    | Patterns that are always blocked                           |
+| `session`      | Max actions, rate limits, escalation rules                 |
+| `remediation`  | Error handling rules and fallback chains                   |
 
 See [examples/](examples/) for complete policy files.
 
@@ -617,49 +617,49 @@ See [examples/](examples/) for complete policy files.
 
 ### File Operations
 
-| Tool | Description | Rollback |
-|------|-------------|----------|
-| `file:read` | Read files within scoped paths | N/A (read-only) |
-| `file:write` | Write files with backup for rollback | Restores previous content |
-| `file:delete` | Delete files within scoped paths | Restores file from backup |
-| `file:move` | Move/rename files within scoped paths | Moves file back to original location |
-| `file:copy` | Copy files within scoped paths | Removes copied file |
+| Tool            | Description                           | Rollback                             |
+| --------------- | ------------------------------------- | ------------------------------------ |
+| `file:read`   | Read files within scoped paths        | N/A (read-only)                      |
+| `file:write`  | Write files with backup for rollback  | Restores previous content            |
+| `file:delete` | Delete files within scoped paths      | Restores file from backup            |
+| `file:move`   | Move/rename files within scoped paths | Moves file back to original location |
+| `file:copy`   | Copy files within scoped paths        | Removes copied file                  |
 
 ### Directory Operations
 
-| Tool | Description | Rollback |
-|------|-------------|----------|
-| `directory:list` | List files and directories within scoped paths | N/A (read-only) |
-| `directory:create` | Create directories within scoped paths | Removes created directories |
+| Tool                 | Description                                    | Rollback                    |
+| -------------------- | ---------------------------------------------- | --------------------------- |
+| `directory:list`   | List files and directories within scoped paths | N/A (read-only)             |
+| `directory:create` | Create directories within scoped paths         | Removes created directories |
 
 ### Command Execution
 
-| Tool | Description | Rollback |
-|------|-------------|----------|
+| Tool            | Description                                | Rollback             |
+| --------------- | ------------------------------------------ | -------------------- |
 | `command:run` | Execute allow-listed binaries with timeout | Compensation actions |
 
 ### Git Operations
 
-| Tool | Description | Rollback |
-|------|-------------|----------|
-| `git:diff` | Get git diff output | N/A (read-only) |
-| `git:apply` | Apply git patches with stash-based rollback | `git checkout . && git stash pop` |
-| `git:commit` | Stage and commit changes | `git reset --soft HEAD~1` |
-| `git:status` | Get working tree status | N/A (read-only) |
+| Tool           | Description                                 | Rollback                            |
+| -------------- | ------------------------------------------- | ----------------------------------- |
+| `git:diff`   | Get git diff output                         | N/A (read-only)                     |
+| `git:apply`  | Apply git patches with stash-based rollback | `git checkout . && git stash pop` |
+| `git:commit` | Stage and commit changes                    | `git reset --soft HEAD~1`         |
+| `git:status` | Get working tree status                     | N/A (read-only)                     |
 
 ### Network & HTTP
 
-| Tool | Description | Rollback |
-|------|-------------|----------|
+| Tool             | Description                           | Rollback             |
+| ---------------- | ------------------------------------- | -------------------- |
 | `http:request` | HTTP requests to allow-listed domains | Compensation actions |
-| `network:dns` | DNS lookups for allow-listed domains | N/A (read-only) |
+| `network:dns`  | DNS lookups for allow-listed domains  | N/A (read-only)      |
 
 ### Environment & System
 
-| Tool | Description | Rollback |
-|------|-------------|----------|
-| `env:read` | Read environment variables with auto-redaction of secrets | N/A (read-only) |
-| `archive:extract` | Extract tar/zip archives within scoped paths | Removes extracted files |
+| Tool                | Description                                               | Rollback                |
+| ------------------- | --------------------------------------------------------- | ----------------------- |
+| `env:read`        | Read environment variables with auto-redaction of secrets | N/A (read-only)         |
+| `archive:extract` | Extract tar/zip archives within scoped paths              | Removes extracted files |
 
 ---
 
