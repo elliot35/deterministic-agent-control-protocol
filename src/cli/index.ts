@@ -26,7 +26,6 @@ import { ShellProxy } from '../proxy/shell-proxy.js';
 import { MCPProxyServer } from '../proxy/mcp-proxy.js';
 import { MCPProxyConfigSchema } from '../proxy/mcp-types.js';
 import type { MCPProxyConfig } from '../proxy/mcp-types.js';
-import { createCliEvolutionHandler } from '../evolution/cli-handler.js';
 import { registerInitCommand } from './init.js';
 
 const program = new Command();
@@ -222,20 +221,14 @@ program
           return; // unreachable but helps TS narrow types
         }
 
-        const gatewayConfig: GatewayConfig = {
-          ledgerDir: proxyConfig.ledgerDir,
-        };
-
-        // Wire policy self-evolution if --evolve flag is set
+        // Enable MCP-native evolution on the proxy (not gateway-level CLI handler)
         if (opts.evolve) {
-          gatewayConfig.policyEvolution = {
-            policyPath: proxyConfig.policy,
-            handler: createCliEvolutionHandler(),
-            timeoutMs: proxyConfig.evolutionTimeoutMs,
-          };
+          proxyConfig.enableEvolution = true;
         }
 
-        const gateway = await AgentGateway.create(gatewayConfig);
+        const gateway = await AgentGateway.create({
+          ledgerDir: proxyConfig.ledgerDir,
+        });
 
         const proxy = new MCPProxyServer(proxyConfig, gateway);
 

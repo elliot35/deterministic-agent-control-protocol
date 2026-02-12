@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-02-12
+
+### Fixed
+
+- **Policy evolution with MCP proxy** — When using `det-acp proxy --evolve`, evolution was previously wired at the gateway with a CLI handler that prompted on stderr, blocking stdin and conflicting with the MCP stdio transport. Evolution is now handled inside the MCP proxy via an MCP-native flow: on deny the proxy returns a structured response with a suggestion ID; the agent presents the suggestion in chat and can call the `policy_evolution_approve` tool to apply the user's decision. No terminal blocking; exports `McpEvolutionHandler` for custom integrations.
+
+---
+
 ## [0.4.0] - 2026-02-12
 
 ### Added

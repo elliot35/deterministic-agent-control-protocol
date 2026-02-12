@@ -74,6 +74,7 @@ export { ShellProxy } from './proxy/shell-proxy.js';
 
 // Policy self-evolution
 export { PolicyEvolutionManager } from './evolution/policy-evolution.js';
+export { McpEvolutionHandler } from './evolution/mcp-handler.js';
 export { suggestPolicyChange } from './evolution/suggestion.js';
 export { applyPolicyChange, writePolicyToFile } from './evolution/writer.js';
 export { createCliEvolutionHandler } from './evolution/cli-handler.js';

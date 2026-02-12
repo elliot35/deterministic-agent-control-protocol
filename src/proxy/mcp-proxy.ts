@@ -27,6 +27,7 @@ import {
 
 import type { AgentGateway } from '../engine/runtime.js';
 import type { MCPProxyConfig, MCPBackendConfig, ToolMapping } from './mcp-types.js';
+import { McpEvolutionHandler } from '../evolution/mcp-handler.js';
 
 interface BackendConnection {
   config: MCPBackendConfig;
@@ -42,10 +43,16 @@ export class MCPProxyServer {
   private gateway: AgentGateway;
   private config: MCPProxyConfig;
   private sessionId: string | null = null;
+  private evolutionHandler: McpEvolutionHandler | null = null;
 
   constructor(config: MCPProxyConfig, gateway: AgentGateway) {
     this.config = config;
     this.gateway = gateway;
+
+    // Create MCP-native evolution handler if evolution is enabled
+    if (config.enableEvolution) {
+      this.evolutionHandler = new McpEvolutionHandler(config.policy);
+    }
 
     this.server = new Server(
       {
@@ -139,12 +146,45 @@ export class MCPProxyServer {
           });
         }
       }
+
+      // Add evolution tool if enabled
+      if (this.evolutionHandler) {
+        const evoDef = this.evolutionHandler.getToolDefinition();
+        tools.push({
+          name: evoDef.name,
+          description: evoDef.description,
+          inputSchema: evoDef.inputSchema,
+        });
+      }
+
       return { tools };
     });
 
     // Handle tools/call — evaluate against policy, then forward
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name: toolName, arguments: toolArgs } = request.params;
+
+      // Handle the policy_evolution_approve tool (not a backend tool)
+      if (this.evolutionHandler?.isEvolutionTool(toolName)) {
+        if (!this.sessionId) {
+          return {
+            content: [{ type: 'text' as const, text: 'No active session' }],
+            isError: true,
+          };
+        }
+        const session = this.gateway.getSession(this.sessionId);
+        if (!session) {
+          return {
+            content: [{ type: 'text' as const, text: 'Session not found' }],
+            isError: true,
+          };
+        }
+        return this.evolutionHandler.handleApproval(
+          (toolArgs ?? {}) as Record<string, unknown>,
+          session,
+        );
+      }
+
       const mapping = this.toolMap.get(toolName);
 
       if (!mapping) {
@@ -167,8 +207,23 @@ export class MCPProxyServer {
         input: (toolArgs ?? {}) as Record<string, unknown>,
       });
 
-      // If denied, return the denial reasons
+      // If denied, return the denial reasons (with evolution suggestion if enabled)
       if (evaluation.decision === 'deny') {
+        if (this.evolutionHandler) {
+          const session = this.gateway.getSession(this.sessionId);
+          if (session) {
+            const evoResponse = this.evolutionHandler.buildDenialResponse(
+              { tool: toolName, input: (toolArgs ?? {}) as Record<string, unknown> },
+              evaluation.reasons,
+              session.policy,
+              this.sessionId,
+            );
+            if (evoResponse) {
+              return evoResponse;
+            }
+          }
+        }
+        // Non-suggestible denial or evolution not enabled — plain denial
         return {
           content: [{
             type: 'text' as const,
