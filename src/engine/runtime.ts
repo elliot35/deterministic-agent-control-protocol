@@ -30,6 +30,8 @@ import { SessionManager, type SessionManagerConfig } from './session.js';
 import { GateManager } from './gate.js';
 import { EvidenceLedger } from '../ledger/ledger.js';
 import { loadPolicyFromFile, parsePolicyYaml } from '../policy/loader.js';
+import { PolicyEvolutionManager } from '../evolution/policy-evolution.js';
+import type { PolicyEvolutionConfig } from '../evolution/types.js';
 
 export interface GatewayConfig {
   /** Directory for ledger files. One file per session. */
@@ -44,6 +46,11 @@ export interface GatewayConfig {
   onStateChange?: (sessionId: string, from: SessionState, to: SessionState) => void;
   /** Callback invoked when a session is terminated. */
   onSessionTerminated?: (sessionId: string, report: SessionReport) => void;
+  /**
+   * Optional policy self-evolution configuration.
+   * When set, deny verdicts trigger a user prompt that can update the policy.
+   */
+  policyEvolution?: PolicyEvolutionConfig;
 }
 
 export class AgentGateway {
@@ -64,6 +71,13 @@ export class AgentGateway {
       onStateChange: config.onStateChange,
       onSessionTerminated: config.onSessionTerminated,
     };
+
+    // Wire policy self-evolution if configured
+    if (config.policyEvolution) {
+      const evolutionManager = new PolicyEvolutionManager(config.policyEvolution);
+      sessionConfig.onDenial = (session, action, result) =>
+        evolutionManager.handleDenial(session, action, result);
+    }
 
     this.sessionManager = new SessionManager(sessionConfig);
   }

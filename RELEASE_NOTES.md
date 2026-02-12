@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-12
+
+### Added
+
+- **Policy self-evolution** — When an action is denied, the system can suggest a minimal policy change, prompt the user for a decision, and optionally update the policy (in memory and/or on disk).
+  - **Suggestion engine** — Pattern-matches denial reasons (no capability, path/binary/domain/method/repo scope violation, forbidden pattern) and produces a single minimal edit: add capability, widen scope, or remove forbidden pattern. Budget and session-limit denials are not suggestible.
+  - **Policy Evolution Manager** — Orchestrates deny → prompt (with configurable timeout, default 30s) → apply change → re-evaluate. User choices: **Add to policy** (persist to YAML), **Allow once** (in-memory only for the session), or **Deny** (keep block).
+  - **CLI handler** — Terminal prompt on stderr (`[A]dd to policy / allow [O]nce / [D]eny`) so MCP stdio is not interfered with.
+  - **Pluggable handler** — Custom `EvolutionHandler` can be used for GUI dialogs, webhooks, etc.
+- **MCP proxy `--evolve` flag** — Enables policy self-evolution when using `npx det-acp proxy --policy <file> --evolve`.
+- **Library API** — `GatewayConfig.policyEvolution` with `policyPath`, `handler`, and optional `timeoutMs`. Exports: `PolicyEvolutionManager`, `suggestPolicyChange`, `applyPolicyChange`, `writePolicyToFile`, `createCliEvolutionHandler`, and evolution types from `@det-acp/core`.
+- README: Policy Self-Evolution section with feature description, enabling instructions, and evolution architecture diagram. Component architecture diagram updated with optional Policy Self-Evolution (Policy Evolution Manager, Suggestion Engine) and Session Manager → Evolution path on deny.
+
+---
+
 ## [0.3.1] - 2026-02-08
 
 ### Fixed

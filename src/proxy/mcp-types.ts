@@ -41,6 +41,13 @@ export interface MCPProxyConfig {
   host?: string;
   /** Metadata to attach to sessions */
   sessionMetadata?: Record<string, unknown>;
+  /**
+   * Enable policy self-evolution.
+   * When true, denied actions trigger a user prompt that can update the policy.
+   */
+  enableEvolution?: boolean;
+  /** Timeout in milliseconds for the evolution prompt (default: 30 000) */
+  evolutionTimeoutMs?: number;
 }
 
 // ---------------------------------------------------------------------------

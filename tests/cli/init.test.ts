@@ -46,6 +46,7 @@ describe('Template Generators', () => {
     expect(parsed.mcpServers['governed-filesystem'].args).toContain(
       '/home/user/project/policy.yaml',
     );
+    expect(parsed.mcpServers['governed-filesystem'].args).toContain('--evolve');
   });
 
   it('generateClaudeCodeMcpJson produces valid JSON with expected fields', () => {
@@ -54,6 +55,7 @@ describe('Template Generators', () => {
 
     expect(parsed.mcpServers['governed-filesystem']).toBeDefined();
     expect(parsed.mcpServers['governed-filesystem'].args).toContain('--policy');
+    expect(parsed.mcpServers['governed-filesystem'].args).toContain('--evolve');
   });
 
   it('generateCodexConfigToml includes command and policy path', () => {
@@ -64,6 +66,7 @@ describe('Template Generators', () => {
     expect(result).toContain('/usr/bin/cli.js');
     expect(result).toContain('/home/user/project/policy.yaml');
     expect(result).toContain('--policy');
+    expect(result).toContain('--evolve');
   });
 
   it('DEFAULT_POLICY contains expected sections', () => {

@@ -225,13 +225,14 @@ export const CLAUDE_SETTINGS_JSON = `\
 /**
  * Generate .cursor/mcp.json content.
  * Uses the simplified `proxy --policy` mode so no mcp-proxy.yaml is needed.
+ * Includes --evolve by default for policy self-evolution.
  */
 export function generateCursorMcpJson(cliPath: string, policyAbsPath: string): string {
   const config = {
     mcpServers: {
       'governed-filesystem': {
         command: 'node',
-        args: [cliPath, 'proxy', '--policy', policyAbsPath],
+        args: [cliPath, 'proxy', '--policy', policyAbsPath, '--evolve'],
       },
     },
   };
@@ -241,13 +242,14 @@ export function generateCursorMcpJson(cliPath: string, policyAbsPath: string): s
 /**
  * Generate .mcp.json content for Claude Code.
  * Uses the simplified `proxy --policy` mode so no mcp-proxy.yaml is needed.
+ * Includes --evolve by default for policy self-evolution.
  */
 export function generateClaudeCodeMcpJson(cliPath: string, policyAbsPath: string): string {
   const config = {
     mcpServers: {
       'governed-filesystem': {
         command: 'node',
-        args: [cliPath, 'proxy', '--policy', policyAbsPath],
+        args: [cliPath, 'proxy', '--policy', policyAbsPath, '--evolve'],
       },
     },
   };
@@ -257,6 +259,7 @@ export function generateClaudeCodeMcpJson(cliPath: string, policyAbsPath: string
 /**
  * Generate .codex/config.toml content.
  * Uses the simplified `proxy --policy` mode so no mcp-proxy.yaml is needed.
+ * Includes --evolve by default for policy self-evolution.
  */
 export function generateCodexConfigToml(cliPath: string, policyAbsPath: string): string {
   return `\
@@ -273,7 +276,8 @@ args = [
   ${JSON.stringify(cliPath)},
   "proxy",
   "--policy",
-  ${JSON.stringify(policyAbsPath)}
+  ${JSON.stringify(policyAbsPath)},
+  "--evolve"
 ]
 `;
 }

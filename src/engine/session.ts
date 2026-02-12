@@ -25,6 +25,7 @@ import type {
   SessionAction,
   SessionReport,
   SessionState,
+  ValidationResult,
 } from '../types.js';
 import { evaluateSessionAction } from '../policy/evaluator.js';
 import { GateManager } from './gate.js';
@@ -41,6 +42,16 @@ export interface SessionManagerConfig {
   onStateChange?: (sessionId: string, from: SessionState, to: SessionState) => void;
   /** Callback invoked when a session is terminated */
   onSessionTerminated?: (sessionId: string, report: SessionReport) => void;
+  /**
+   * Optional denial handler for policy self-evolution.
+   * Called when an action is denied. May mutate session.policy in-place
+   * and return 'retry' to trigger re-evaluation, or 'deny' to keep the block.
+   */
+  onDenial?: (
+    session: Session,
+    action: ActionRequest,
+    result: ValidationResult,
+  ) => Promise<'retry' | 'deny'>;
 }
 
 interface SessionEntry {
@@ -128,12 +139,25 @@ export class SessionManager {
     const actionIndex = session.actions.length;
 
     // Evaluate against policy + session state
-    const result = evaluateSessionAction(action, session.policy, session);
+    let result = evaluateSessionAction(action, session.policy, session);
 
     // Update budget counters
     session.budget.actionsEvaluated++;
     if (result.verdict === 'deny') {
       session.budget.actionsDenied++;
+    }
+
+    // --- Policy self-evolution: intercept deny verdicts ---
+    if (result.verdict === 'deny' && this.config.onDenial) {
+      const evolution = await this.config.onDenial(session, action, result);
+      if (evolution === 'retry') {
+        // The handler may have mutated session.policy — re-evaluate
+        session.budget.actionsDenied--;
+        result = evaluateSessionAction(action, session.policy, session);
+        if (result.verdict === 'deny') {
+          session.budget.actionsDenied++;
+        }
+      }
     }
 
     // Create session action record

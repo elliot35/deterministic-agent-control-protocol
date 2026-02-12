@@ -19,12 +19,14 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { loadPolicyFromFile, PolicyValidationError } from '../policy/loader.js';
 import { AgentGateway } from '../engine/runtime.js';
+import type { GatewayConfig } from '../engine/runtime.js';
 import { EvidenceLedger } from '../ledger/ledger.js';
 import { summarizeSessionLedger } from '../ledger/query.js';
 import { ShellProxy } from '../proxy/shell-proxy.js';
 import { MCPProxyServer } from '../proxy/mcp-proxy.js';
 import { MCPProxyConfigSchema } from '../proxy/mcp-types.js';
 import type { MCPProxyConfig } from '../proxy/mcp-types.js';
+import { createCliEvolutionHandler } from '../evolution/cli-handler.js';
 import { registerInitCommand } from './init.js';
 
 const program = new Command();
@@ -32,7 +34,7 @@ const program = new Command();
 program
   .name('det-acp')
   .description('Deterministic Agent Control Protocol — Agent Governance Gateway')
-  .version('0.2.0');
+  .version('0.4.0');
 
 // ---------------------------------------------------------------------------
 // validate
@@ -152,10 +154,11 @@ program
   )
   .option('--dir <path>', 'Project directory for filesystem backend (default: policy file parent dir)')
   .option('--ledger-dir <dir>', 'Directory for ledger files (default: .det-acp/ledgers in project dir)')
+  .option('--evolve', 'Enable policy self-evolution (prompt on deny to update policy)')
   .action(
     async (
       configPath: string | undefined,
-      opts: { policy?: string; dir?: string; ledgerDir?: string },
+      opts: { policy?: string; dir?: string; ledgerDir?: string; evolve?: boolean },
     ) => {
       try {
         let proxyConfig: MCPProxyConfig;
@@ -219,15 +222,29 @@ program
           return; // unreachable but helps TS narrow types
         }
 
-        const gateway = await AgentGateway.create({
+        const gatewayConfig: GatewayConfig = {
           ledgerDir: proxyConfig.ledgerDir,
-        });
+        };
+
+        // Wire policy self-evolution if --evolve flag is set
+        if (opts.evolve) {
+          gatewayConfig.policyEvolution = {
+            policyPath: proxyConfig.policy,
+            handler: createCliEvolutionHandler(),
+            timeoutMs: proxyConfig.evolutionTimeoutMs,
+          };
+        }
+
+        const gateway = await AgentGateway.create(gatewayConfig);
 
         const proxy = new MCPProxyServer(proxyConfig, gateway);
 
         console.error('Starting MCP proxy server...');
         console.error(`  Transport: ${proxyConfig.transport}`);
         console.error(`  Backends: ${proxyConfig.backends.map((b) => b.name).join(', ')}`);
+        if (opts.evolve) {
+          console.error('  Policy evolution: enabled');
+        }
 
         await proxy.start();
 

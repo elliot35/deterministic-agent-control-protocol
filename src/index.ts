@@ -72,6 +72,24 @@ export { MCPProxyServer } from './proxy/mcp-proxy.js';
 export type { MCPProxyConfig, MCPBackendConfig } from './proxy/mcp-types.js';
 export { ShellProxy } from './proxy/shell-proxy.js';
 
+// Policy self-evolution
+export { PolicyEvolutionManager } from './evolution/policy-evolution.js';
+export { suggestPolicyChange } from './evolution/suggestion.js';
+export { applyPolicyChange, writePolicyToFile } from './evolution/writer.js';
+export { createCliEvolutionHandler } from './evolution/cli-handler.js';
+export type {
+  DenialCategory,
+  PolicySuggestion,
+  PolicyChange,
+  AddCapabilityChange,
+  WidenScopeChange,
+  RemoveForbiddenChange,
+  EvolutionDecision,
+  EvolutionResult,
+  EvolutionHandler,
+  PolicyEvolutionConfig,
+} from './evolution/types.js';
+
 // Server
 export { createServer, startServer, type ServerConfig } from './server/server.js';
 

@@ -58,6 +58,7 @@ https://github.com/user-attachments/assets/ec7a9524-1527-4e51-b837-7e05a24b189d
 - [Agent Integrations](#agent-integrations)
 - [Built-in Policies](#built-in-policies)
 - [Integration Modes](#integration-modes)
+- [Policy Self-Evolution](#policy-self-evolution)
 - [Architecture](#architecture)
 - [Policy DSL Reference](#policy-dsl-reference)
 - [Built-in Tool Adapters](#built-in-tool-adapters)
@@ -342,11 +343,79 @@ npx det-acp init <agent>                  # Set up governance (cursor, codex, cl
 npx det-acp init <agent> --policy <file>  # Use custom policy
 npx det-acp validate <policy-file>        # Validate a policy
 npx det-acp proxy --policy <policy-file>  # Start MCP proxy (simplified)
+npx det-acp proxy --policy <policy-file> --evolve  # With policy self-evolution
 npx det-acp proxy <config-file>           # Start MCP proxy (full config)
 npx det-acp exec <policy-file> <command>  # Execute via shell proxy
 npx det-acp report <ledger-file>          # View audit report
 npx det-acp serve [--port <port>]         # Start HTTP session server
 ```
+
+---
+
+## Policy Self-Evolution
+
+When an action is **denied** by the policy, the self-evolution feature can suggest a minimal policy change that would allow it, prompt you for a decision, and optionally update the policy (in memory and/or on disk). This keeps governance strict by default while letting you relax policy incrementally when you approve.
+
+### What it does
+
+- **Analyses denials** — Pattern-matches denial reasons (missing capability, path/binary/domain outside scope, forbidden pattern) and produces a single, minimal policy edit.
+- **Prompts you** — Presents the suggestion (e.g. “Add `file:read` capability for path `./config/**`?”) with a configurable timeout (default 30s).
+- **Three choices:**
+  - **Add to policy** — Apply the change to the session’s policy and **persist** it to the policy YAML file.
+  - **Allow once** — Apply the change **in memory only** for the current session (no disk write).
+  - **Deny** — Keep the block; no change.
+- **Retry** — If you choose “add to policy” or “allow once”, the action is **re-evaluated** against the updated policy and can be allowed in the same request.
+
+Budget and session-limit denials (e.g. “Budget exceeded”, “Rate limit exceeded”) are **not** suggestible; only permission/scope/forbidden denials can trigger evolution.
+
+### Enabling self-evolution
+
+**MCP proxy (simplified mode):**
+
+```bash
+npx det-acp proxy --policy ./policy.yaml --evolve
+```
+
+**Programmatic (library):** pass `policyEvolution` in `GatewayConfig` when creating the gateway:
+
+```typescript
+import { AgentGateway, createCliEvolutionHandler } from '@det-acp/core';
+
+const gateway = await AgentGateway.create({
+  ledgerDir: './ledgers',
+  policyEvolution: {
+    policyPath: './agent.policy.yaml',
+    handler: createCliEvolutionHandler(),
+    timeoutMs: 30_000,
+  },
+});
+```
+
+You can plug a custom `EvolutionHandler` (e.g. GUI dialog, webhook) instead of `createCliEvolutionHandler()`.
+
+### Evolution architecture (high level)
+
+```mermaid
+flowchart LR
+    subgraph Denial["On Deny"]
+        A["Action Denied"] --> B["Suggestion Engine"]
+        B --> C{"Suggestible?"}
+        C -->|No| D["Keep Deny"]
+        C -->|Yes| E["PolicySuggestion"]
+    end
+    E --> F["Handler (CLI / GUI / Webhook)"]
+    F --> G{"User Decision"}
+    G -->|Add to policy| H["Apply + Write YAML"]
+    G -->|Allow once| I["Apply in-memory only"]
+    G -->|Deny| D
+    H --> J["Re-evaluate Action"]
+    I --> J
+    J --> K{"Verdict"}
+    K -->|allow| L["Proceed"]
+    K -->|deny| D
+```
+
+The **Suggestion Engine** maps denial reasons to one of: add capability, widen scope (paths/binaries/domains/methods/repos), or remove a forbidden pattern. The **Policy Evolution Manager** runs the handler with a timeout, applies the chosen change to the session policy (and optionally to disk), and the **Session Manager** re-evaluates the same action so the agent can proceed without retrying the tool call.
 
 ---
 
@@ -374,6 +443,10 @@ graph TB
         PolicyEval["Policy Evaluator"]
         GateMgr["Gate Manager"]
         ActionReg["Action Registry"]
+        subgraph Evolution["Policy Self-Evolution (optional)"]
+            EvolutionMgr["Policy Evolution Manager"]
+            SuggestionEngine["Suggestion Engine"]
+        end
     end
 
     subgraph Infra["Infrastructure"]
@@ -420,6 +493,8 @@ graph TB
     SessionMgr --> PolicyEval
     SessionMgr --> GateMgr
     SessionMgr --> Ledger
+    SessionMgr -->|on deny| EvolutionMgr
+    EvolutionMgr --> SuggestionEngine
 
     ActionReg --> FileTools
     ActionReg --> DirTools
